@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="CondominioX - Sistema de Gestión Inteligente de Condominio">
+    <title>CondominioX - Gestión Inteligente</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar izquierdo -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="img/logo.png" alt="CondominioX Logo" class="logo-img">
+                <h1>CONDOMINIOX</h1>
+                <p class="tagline">Gestión Inteligente</p>
+            </div>
+
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-tab="inicio" onclick="showTab('inicio')">
+                    <span class="nav-icon">🏠</span>
+                    <span>Inicio</span>
+                </button>
+                <button class="nav-item" data-tab="informacion" onclick="showTab('informacion')">
+                    <span class="nav-icon">📋</span>
+                    <span>Información</span>
+                </button>
+                <button class="nav-item" data-tab="acerca" onclick="showTab('acerca')">
+                    <span class="nav-icon">ℹ️</span>
+                    <span>Acerca de</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <p>&copy; 2025 CondominioX</p>
+            </div>
+        </aside>
+
+        <!-- Contenido principal -->
+        <main class="main-content">
+            <!-- Tab: Inicio -->
+            <div id="tab-inicio" class="tab-content active">
+                <div class="content-header">
+                    <h2>Bienvenido</h2>
+                    <p>Seleccione su tipo de acceso para continuar</p>
+                </div>
+
+                <div class="login-section">
+                    <!-- Paso 1: Selección de tipo de usuario -->
+                    <div id="step1" class="login-step active">
+                        <div class="user-type-selector">
+                            <button type="button" class="user-type-btn" data-type="Administrador" onclick="selectUserType('Administrador')">
+                                <div class="user-type-icon">🔐</div>
+                                <div class="user-type-info">
+                                    <span class="user-type-title">Administrador</span>
+                                    <span class="user-type-desc">Gestión completa del sistema</span>
+                                </div>
+                            </button>
+                            <button type="button" class="user-type-btn" data-type="Propietario" onclick="selectUserType('Propietario')">
+                                <div class="user-type-icon">🏠</div>
+                                <div class="user-type-info">
+                                    <span class="user-type-title">Propietario</span>
+                                    <span class="user-type-desc">Consulta de recibos y pagos</span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Paso 2: Formulario de login -->
+                    <div id="step2" class="login-step">
+                        <div class="selected-type-badge" id="selectedTypeBadge">
+                            <span id="selectedTypeIcon">🔐</span>
+                            <span id="selectedTypeText">Administrador</span>
+                            <button type="button" class="change-type-btn" onclick="goBackToStep1()">Cambiar</button>
+                        </div>
+
+                        <form id="loginForm" class="form-login">
+                            <input type="hidden" id="tipoUsuario" name="tipoUsuario" value="">
+
+                            <div class="form-group">
+                                <label for="usuario">Usuario</label>
+                                <div class="input-wrapper">
+                                    <span class="input-icon">👤</span>
+                                    <input
+                                        type="text"
+                                        id="usuario"
+                                        name="usuario"
+                                        placeholder="Ingrese su usuario"
+                                        required
+                                        autocomplete="username"
+                                    >
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="contrasena">Contraseña</label>
+                                <div class="input-wrapper">
+                                    <span class="input-icon">🔒</span>
+                                    <input
+                                        type="password"
+                                        id="contrasena"
+                                        name="contrasena"
+                                        placeholder="Ingrese su contraseña"
+                                        required
+                                        autocomplete="current-password"
+                                    >
+                                </div>
+                            </div>
+
+                            <div id="mensaje" class="mensaje"></div>
+
+                            <button type="submit" class="btn btn-primary">
+                                <span>Iniciar Sesión</span>
+                                <span class="btn-arrow">→</span>
+                            </button>
+                        </form>
+
+                        <div class="form-links">
+                            <a href="recuperar.html">¿Olvidó su contraseña?</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Información -->
+            <div id="tab-informacion" class="tab-content">
+                <div class="content-header">
+                    <h2>Información del Sistema</h2>
+                    <p>Funcionalidades disponibles según tipo de usuario</p>
+                </div>
+
+                <div class="info-cards">
+                    <div class="info-card">
+                        <div class="info-card-header admin">
+                            <span class="info-card-icon">🔐</span>
+                            <h3>Administrador</h3>
+                        </div>
+                        <ul class="feature-list">
+                            <li><span class="check">✓</span> Gestión de Propietarios</li>
+                            <li><span class="check">✓</span> Generar Recibos</li>
+                            <li><span class="check">✓</span> Registrar Gastos</li>
+                            <li><span class="check">✓</span> Reportes y Estadísticas</li>
+                            <li><span class="check">✓</span> Configuración del Sistema</li>
+                            <li><span class="check">✓</span> Cambiar Contraseña</li>
+                        </ul>
+                    </div>
+
+                    <div class="info-card">
+                        <div class="info-card-header propietario">
+                            <span class="info-card-icon">🏠</span>
+                            <h3>Propietario</h3>
+                        </div>
+                        <ul class="feature-list">
+                            <li><span class="check">✓</span> Ver Recibos Propios</li>
+                            <li><span class="check">✓</span> Pagar Recibos</li>
+                            <li><span class="check">✓</span> Historial de Pagos</li>
+                            <li><span class="check">✓</span> Ver Estado de Cuenta</li>
+                            <li><span class="check">✓</span> Cambiar Contraseña</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Acerca de -->
+            <div id="tab-acerca" class="tab-content">
+                <div class="content-header">
+                    <h2>Acerca del Sistema</h2>
+                    <p>Información sobre CondominioX</p>
+                </div>
+
+                <div class="about-section">
+                    <div class="about-card">
+                        <div class="about-logo">
+                            <img src="img/logo.png" alt="CondominioX Logo">
+                        </div>
+                        <h3>CondominioX</h3>
+                        <p class="version">Versión 1.0</p>
+                        <p class="about-description">
+                            Sistema integral de gestión de condominios que permite administrar
+                            propietarios, generar recibos, registrar gastos y facilitar el pago
+                            de cuotas de mantenimiento de manera eficiente y segura.
+                        </p>
+                    </div>
+
+                    <div class="about-features">
+                        <div class="about-feature-item">
+                            <span class="about-feature-icon">🛡️</span>
+                            <div>
+                                <h4>Seguridad</h4>
+                                <p>Protección de datos y acceso controlado por roles</p>
+                            </div>
+                        </div>
+                        <div class="about-feature-item">
+                            <span class="about-feature-icon">⚡</span>
+                            <div>
+                                <h4>Rapidez</h4>
+                                <p>Interfaz intuitiva y procesos optimizados</p>
+                            </div>
+                        </div>
+                        <div class="about-feature-item">
+                            <span class="about-feature-icon">📊</span>
+                            <div>
+                                <h4>Reportes</h4>
+                                <p>Informes detallados y estadísticas en tiempo real</p>
+                            </div>
+                        </div>
+                        <div class="about-feature-item">
+                            <span class="about-feature-icon">💳</span>
+                            <div>
+                                <h4>Pagos</h4>
+                                <p>Gestión completa de cobros y pagos</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="contact-info">
+                        <h4>Contacto</h4>
+                        <p>Para soporte técnico o consultas:</p>
+                        <p class="contact-email">soporte@condominiox.com</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        // Función para cambiar de pestaña
+        function showTab(tabName) {
+            // Ocultar todos los contenidos
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Desactivar todos los botones de navegación
+            document.querySelectorAll('.nav-item').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Mostrar el contenido seleccionado
+            document.getElementById('tab-' + tabName).classList.add('active');
+
+            // Activar el botón correspondiente
+            document.querySelector('.nav-item[data-tab="' + tabName + '"]').classList.add('active');
+        }
+
+        // Funciones para el flujo de login en dos pasos
+        function selectUserType(type) {
+            const icon = type === 'Administrador' ? '🔐' : '🏠';
+
+            document.getElementById('tipoUsuario').value = type;
+            document.getElementById('selectedTypeIcon').textContent = icon;
+            document.getElementById('selectedTypeText').textContent = type;
+
+            // Marcar botón seleccionado
+            document.querySelectorAll('.user-type-btn').forEach(btn => {
+                btn.classList.remove('selected');
+                if (btn.dataset.type === type) {
+                    btn.classList.add('selected');
+                }
+            });
+
+            // Cambiar al paso 2
+            document.getElementById('step1').classList.remove('active');
+            document.getElementById('step2').classList.add('active');
+
+            // Enfocar el campo de usuario
+            setTimeout(() => {
+                document.getElementById('usuario').focus();
+            }, 300);
+        }
+
+        function goBackToStep1() {
+            document.getElementById('step2').classList.remove('active');
+            document.getElementById('step1').classList.add('active');
+
+            // Limpiar selección
+            document.querySelectorAll('.user-type-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+        }
+    </script>
+</body>
+</html>

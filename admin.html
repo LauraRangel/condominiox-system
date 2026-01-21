@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Panel de Administrador - CondominioX">
+    <title>Panel Administrador - CondominioX</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="img/logo.png" alt="CondominioX Logo" class="logo-img">
+                <h1>CONDOMINIOX</h1>
+                <p class="tagline">Panel Administrador</p>
+            </div>
+
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-section="dashboard" onclick="mostrarSeccion('dashboard', this)">
+                    <span class="nav-icon">📊</span>
+                    <span>Dashboard</span>
+                </button>
+                <button class="nav-item" data-section="propietarios" onclick="mostrarSeccion('propietarios', this)">
+                    <span class="nav-icon">👥</span>
+                    <span>Propietarios</span>
+                </button>
+                <button class="nav-item" data-section="gastos" onclick="mostrarSeccion('gastos', this)">
+                    <span class="nav-icon">💰</span>
+                    <span>Gastos</span>
+                </button>
+                <button class="nav-item" data-section="recibos" onclick="mostrarSeccion('recibos', this)">
+                    <span class="nav-icon">📋</span>
+                    <span>Recibos</span>
+                </button>
+                <button class="nav-item" data-section="perfil" onclick="mostrarSeccion('perfil', this)">
+                    <span class="nav-icon">⚙️</span>
+                    <span>Mi Perfil</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-user">
+                <div class="user-avatar">👤</div>
+                <div class="user-info-sidebar">
+                    <span class="user-name" id="userName">Admin</span>
+                    <span class="user-role">Administrador</span>
+                </div>
+                <button class="btn-logout" onclick="cerrarSesion()" title="Cerrar Sesión">🚪</button>
+            </div>
+        </aside>
+
+        <!-- Contenido principal -->
+        <main class="panel-content">
+            <!-- Dashboard -->
+            <section id="dashboard-section" class="panel-section active">
+                <div class="section-header">
+                    <h2>Dashboard</h2>
+                    <p>Resumen general del sistema</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon blue">👥</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="totalPropietarios">0</span>
+                            <span class="stat-label">Propietarios</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon orange">📋</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="recibosPendientes">0</span>
+                            <span class="stat-label">Recibos Pendientes</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon red">💸</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="gastosDelMes">S/ 0</span>
+                            <span class="stat-label">Gastos del Mes</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon green">✅</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="recibosPagados">0</span>
+                            <span class="stat-label">Recibos Pagados</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Propietarios -->
+            <section id="propietarios-section" class="panel-section">
+                <div class="section-header">
+                    <h2>Gestión de Propietarios</h2>
+                    <p>Administra los propietarios del condominio</p>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="mostrarFormulario('agregarPropietario')">
+                        + Agregar Propietario
+                    </button>
+                    <button class="btn btn-secondary" onclick="listarPropietarios()">
+                        Actualizar Lista
+                    </button>
+                </div>
+
+                <!-- Formulario Agregar Propietario -->
+                <div id="formAgregarPropietario" class="form-card hidden">
+                    <div class="form-card-header">
+                        <h3>Nuevo Propietario</h3>
+                        <button class="btn-close" onclick="cerrarFormulario('agregarPropietario')">×</button>
+                    </div>
+                    <form id="formPropietario" class="panel-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="propNombre">Nombre *</label>
+                                <input type="text" id="propNombre" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="propApellido">Apellido *</label>
+                                <input type="text" id="propApellido" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="propDNI">DNI *</label>
+                                <input type="text" id="propDNI" required maxlength="8">
+                            </div>
+                            <div class="form-group">
+                                <label for="propTelefono">Teléfono</label>
+                                <input type="tel" id="propTelefono">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="propCorreo">Correo Electrónico</label>
+                            <input type="email" id="propCorreo">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="propDepartamento">Departamento *</label>
+                                <input type="text" id="propDepartamento" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="propTorre">Torre *</label>
+                                <select id="propTorre" required>
+                                    <option value="">Seleccionar...</option>
+                                    <option value="A">Torre A</option>
+                                    <option value="B">Torre B</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="propUsuario">Usuario *</label>
+                                <input type="text" id="propUsuario" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="propContrasena">Contraseña *</label>
+                                <input type="password" id="propContrasena" required minlength="6">
+                            </div>
+                        </div>
+                        <div id="mensajePropietario" class="mensaje"></div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Guardar</button>
+                            <button type="button" class="btn btn-secondary" onclick="cerrarFormulario('agregarPropietario')">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="data-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre Completo</th>
+                                <th>DNI</th>
+                                <th>Depto.</th>
+                                <th>Torre</th>
+                                <th>Teléfono</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaPropietarios">
+                            <tr>
+                                <td colspan="7" class="empty-state">No hay propietarios registrados</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Gastos -->
+            <section id="gastos-section" class="panel-section">
+                <div class="section-header">
+                    <h2>Gestión de Gastos</h2>
+                    <p>Registra los gastos del condominio</p>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="mostrarFormulario('agregarGasto')">
+                        + Gasto Mantenimiento
+                    </button>
+                    <button class="btn btn-warning" onclick="mostrarFormulario('agregarGastoLuz')">
+                        ⚡ Gasto de Luz
+                    </button>
+                </div>
+
+                <!-- Formulario Gasto Mantenimiento -->
+                <div id="formAgregarGasto" class="form-card hidden">
+                    <div class="form-card-header">
+                        <h3>Nuevo Gasto de Mantenimiento</h3>
+                        <button class="btn-close" onclick="cerrarFormulario('agregarGasto')">×</button>
+                    </div>
+                    <form id="formGasto" class="panel-form">
+                        <div class="form-group">
+                            <label for="gastoProveedor">Proveedor *</label>
+                            <input type="text" id="gastoProveedor" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="gastoConcepto">Concepto *</label>
+                            <textarea id="gastoConcepto" required rows="3"></textarea>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="gastoMonto">Monto (S/) *</label>
+                                <input type="number" id="gastoMonto" step="0.01" min="0" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="gastoFecha">Fecha *</label>
+                                <input type="date" id="gastoFecha" required>
+                            </div>
+                        </div>
+                        <div id="mensajeGasto" class="mensaje"></div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Registrar</button>
+                            <button type="button" class="btn btn-secondary" onclick="cerrarFormulario('agregarGasto')">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Formulario Gasto Luz -->
+                <div id="formAgregarGastoLuz" class="form-card hidden">
+                    <div class="form-card-header">
+                        <h3>Gasto de Luz Común</h3>
+                        <button class="btn-close" onclick="cerrarFormulario('agregarGastoLuz')">×</button>
+                    </div>
+                    <form id="formGastoLuz" class="panel-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="gastoLuzMonto">Monto Total (S/) *</label>
+                                <input type="number" id="gastoLuzMonto" step="0.01" min="0" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="gastoLuzFecha">Fecha *</label>
+                                <input type="date" id="gastoLuzFecha" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="gastoLuzMes">Mes del Recibo</label>
+                            <input type="month" id="gastoLuzMes" required>
+                        </div>
+                        <div id="mensajeGastoLuz" class="mensaje"></div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Registrar</button>
+                            <button type="button" class="btn btn-secondary" onclick="cerrarFormulario('agregarGastoLuz')">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="data-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Proveedor</th>
+                                <th>Concepto</th>
+                                <th>Tipo</th>
+                                <th>Monto</th>
+                                <th>Fecha</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaGastos">
+                            <tr>
+                                <td colspan="6" class="empty-state">No hay gastos registrados</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Recibos -->
+            <section id="recibos-section" class="panel-section">
+                <div class="section-header">
+                    <h2>Gestión de Recibos</h2>
+                    <p>Genera y administra los recibos de mantenimiento</p>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="generarRecibos()">
+                        📄 Generar Recibos del Mes
+                    </button>
+                    <button class="btn btn-secondary" onclick="listarRecibos('pendientes')">
+                        Pendientes
+                    </button>
+                    <button class="btn btn-success" onclick="listarRecibos('pagados')">
+                        Pagados
+                    </button>
+                </div>
+
+                <div class="data-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Propietario</th>
+                                <th>Depto.</th>
+                                <th>Total</th>
+                                <th>Estado</th>
+                                <th>Emisión</th>
+                                <th>Pago</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaRecibos">
+                            <tr>
+                                <td colspan="7" class="empty-state">Seleccione una opción</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Perfil -->
+            <section id="perfil-section" class="panel-section">
+                <div class="section-header">
+                    <h2>Mi Perfil</h2>
+                    <p>Configuración de cuenta</p>
+                </div>
+
+                <div class="form-card" style="max-width: 500px;">
+                    <div class="form-card-header">
+                        <h3>Cambiar Contraseña</h3>
+                    </div>
+                    <form id="formCambiarContrasena" class="panel-form">
+                        <div class="form-group">
+                            <label for="nuevaContrasena">Nueva Contraseña *</label>
+                            <input type="password" id="nuevaContrasena" required minlength="6">
+                            <small>Mínimo 6 caracteres</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmarContrasena">Confirmar Contraseña *</label>
+                            <input type="password" id="confirmarContrasena" required minlength="6">
+                        </div>
+                        <div id="mensajePerfil" class="mensaje"></div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Cambiar Contraseña</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/admin.js"></script>
+    <script>
+        // Override mostrarSeccion para el nuevo diseño
+        function mostrarSeccion(seccionId, btn) {
+            document.querySelectorAll('.panel-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.sidebar-nav .nav-item').forEach(b => b.classList.remove('active'));
+
+            document.getElementById(seccionId + '-section').classList.add('active');
+            if (btn) btn.classList.add('active');
+        }
+    </script>
+</body>
+</html>

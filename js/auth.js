@@ -1,0 +1,149 @@
+// Usuarios de demostración
+const USUARIOS_DEMO = {
+    'admin': { id: 1, usuario: 'admin', contrasena: '123456', tipo: 'Administrador' },
+    'propietario': { id: 2, usuario: 'propietario', contrasena: '123456', tipo: 'Propietario' }
+};
+
+// Manejar el formulario de login
+if (document.getElementById('loginForm')) {
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const usuario = document.getElementById('usuario').value;
+        const contrasena = document.getElementById('contrasena').value;
+        const tipoUsuario = document.getElementById('tipoUsuario').value;
+        const mensaje = document.getElementById('mensaje');
+
+        // Validar tipo de usuario
+        if (!tipoUsuario) {
+            mensaje.textContent = 'Por favor seleccione el tipo de usuario';
+            mensaje.className = 'mensaje error';
+            return;
+        }
+
+        // Limpiar mensaje previo
+        mensaje.textContent = 'Iniciando sesión...';
+        mensaje.className = 'mensaje';
+        mensaje.style.display = 'block';
+
+        // Login demo
+        const userDemo = USUARIOS_DEMO[usuario];
+
+        if (userDemo && userDemo.contrasena === contrasena) {
+            if (userDemo.tipo !== tipoUsuario) {
+                mensaje.textContent = `Este usuario es ${userDemo.tipo}, no ${tipoUsuario}`;
+                mensaje.className = 'mensaje error';
+                return;
+            }
+
+            setAuthToken('demo_token_' + Date.now());
+            setUserData({
+                id: userDemo.id,
+                usuario: userDemo.usuario,
+                tipo: userDemo.tipo
+            });
+
+            mensaje.textContent = 'Inicio de sesión exitoso. Redirigiendo...';
+            mensaje.className = 'mensaje success';
+
+            setTimeout(() => {
+                if (userDemo.tipo === 'Administrador') {
+                    window.location.href = 'admin.html';
+                } else {
+                    window.location.href = 'propietario.html';
+                }
+            }, 1000);
+        } else {
+            mensaje.textContent = 'Usuario o contraseña incorrectos';
+            mensaje.className = 'mensaje error';
+        }
+    });
+}
+
+// Función para cerrar sesión
+function cerrarSesion() {
+    if (confirm('¿Está seguro que desea cerrar sesión?')) {
+        removeAuthToken();
+        window.location.href = 'index.html';
+    }
+}
+
+// Verificar autenticación en páginas protegidas
+if (window.location.pathname.includes('admin.html') ||
+    window.location.pathname.includes('propietario.html')) {
+    requireAuth();
+
+    // Mostrar nombre del usuario
+    const userData = getUserData();
+    if (userData) {
+        const userNameElement = document.getElementById('userName');
+        if (userNameElement) {
+            userNameElement.textContent = userData.usuario;
+        }
+    }
+}
+
+// ========================================
+// FUNCIONES DE UI
+// ========================================
+
+// Función para mostrar/ocultar secciones
+function mostrarSeccion(seccionId) {
+    const secciones = document.querySelectorAll('.content-section');
+    secciones.forEach(seccion => {
+        seccion.classList.add('hidden');
+    });
+
+    const seccion = document.getElementById(`${seccionId}-section`);
+    if (seccion) {
+        seccion.classList.remove('hidden');
+    }
+
+    const links = document.querySelectorAll('.nav-list a');
+    links.forEach(link => {
+        link.classList.remove('active');
+    });
+    if (event && event.target) {
+        event.target.classList.add('active');
+    }
+}
+
+// Función para mostrar formularios
+function mostrarFormulario(formId) {
+    const form = document.getElementById(`form${formId.charAt(0).toUpperCase() + formId.slice(1)}`);
+    if (form) {
+        form.classList.remove('hidden');
+        form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+// Función para cerrar formularios
+function cerrarFormulario(formId) {
+    const form = document.getElementById(`form${formId.charAt(0).toUpperCase() + formId.slice(1)}`);
+    if (form) {
+        form.classList.add('hidden');
+        const formElement = form.querySelector('form');
+        if (formElement) {
+            formElement.reset();
+        }
+        const mensaje = form.querySelector('.mensaje');
+        if (mensaje) {
+            mensaje.textContent = '';
+            mensaje.className = 'mensaje';
+        }
+    }
+}
+
+// Mostrar mensajes de alerta
+function mostrarMensaje(elementId, texto, tipo = 'success') {
+    const elemento = document.getElementById(elementId);
+    if (elemento) {
+        elemento.textContent = texto;
+        elemento.className = `mensaje ${tipo}`;
+        elemento.style.display = 'block';
+
+        setTimeout(() => {
+            elemento.style.display = 'none';
+        }, 5000);
+    }
+}

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Recuperar Contraseña - CondominioX">
+    <title>Recuperar Contraseña - CondominioX</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="recuperar-container">
+        <a href="index.html" class="back-link">← Volver al inicio</a>
+
+        <div class="recuperar-card">
+            <img src="img/logo.png" alt="CondominioX" class="logo-mini">
+            <h2>Recuperar Contraseña</h2>
+            <p class="text-muted">Responda la pregunta de seguridad para restablecer su contraseña</p>
+
+            <form id="formRecuperar" class="form-login">
+                <div class="form-group">
+                    <label for="usuario">Usuario</label>
+                    <input
+                        type="text"
+                        id="usuario"
+                        name="usuario"
+                        placeholder="Ingrese su usuario"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="preguntaSeguridad">Respuesta de Seguridad</label>
+                    <input
+                        type="text"
+                        id="preguntaSeguridad"
+                        name="preguntaSeguridad"
+                        placeholder="Ej: Nombre de tu primera mascota"
+                        required
+                    >
+                    <small>Responda la pregunta que configuró al crear su cuenta</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="nuevaContrasena">Nueva Contraseña</label>
+                    <input
+                        type="password"
+                        id="nuevaContrasena"
+                        name="nuevaContrasena"
+                        placeholder="Ingrese nueva contraseña"
+                        required
+                        minlength="6"
+                    >
+                    <small>Mínimo 6 caracteres</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmarContrasena">Confirmar Contraseña</label>
+                    <input
+                        type="password"
+                        id="confirmarContrasena"
+                        name="confirmarContrasena"
+                        placeholder="Confirme la contraseña"
+                        required
+                        minlength="6"
+                    >
+                </div>
+
+                <div id="mensaje" class="mensaje"></div>
+
+                <button type="submit" class="btn btn-primary">
+                    <span>Recuperar Contraseña</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        document.getElementById('formRecuperar').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const usuario = document.getElementById('usuario').value;
+            const preguntaSeguridad = document.getElementById('preguntaSeguridad').value;
+            const nuevaContrasena = document.getElementById('nuevaContrasena').value;
+            const confirmarContrasena = document.getElementById('confirmarContrasena').value;
+            const mensaje = document.getElementById('mensaje');
+
+            if (nuevaContrasena !== confirmarContrasena) {
+                mensaje.textContent = 'Las contraseñas no coinciden';
+                mensaje.className = 'mensaje error';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/recuperar-contrasena`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        usuario: usuario,
+                        pregunta_seguridad: preguntaSeguridad,
+                        nueva_contrasena: nuevaContrasena
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    mensaje.textContent = 'Contraseña recuperada exitosamente. Redirigiendo...';
+                    mensaje.className = 'mensaje success';
+
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 2000);
+                } else {
+                    mensaje.textContent = data.error || 'Error al recuperar contraseña';
+                    mensaje.className = 'mensaje error';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                mensaje.textContent = 'Error de conexión. Intente nuevamente.';
+                mensaje.className = 'mensaje error';
+            }
+        });
+    </script>
+</body>
+</html>

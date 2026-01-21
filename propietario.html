@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Panel de Propietario - CondominioX">
+    <title>Panel Propietario - CondominioX</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="img/logo.png" alt="CondominioX Logo" class="logo-img">
+                <h1>CONDOMINIOX</h1>
+                <p class="tagline">Panel Propietario</p>
+            </div>
+
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-section="informacion" onclick="mostrarSeccion('informacion', this)">
+                    <span class="nav-icon">🏠</span>
+                    <span>Mi Información</span>
+                </button>
+                <button class="nav-item" data-section="pendientes" onclick="mostrarSeccion('pendientes', this)">
+                    <span class="nav-icon">📋</span>
+                    <span>Recibos Pendientes</span>
+                </button>
+                <button class="nav-item" data-section="pagados" onclick="mostrarSeccion('pagados', this)">
+                    <span class="nav-icon">✅</span>
+                    <span>Recibos Pagados</span>
+                </button>
+                <button class="nav-item" data-section="perfil" onclick="mostrarSeccion('perfil', this)">
+                    <span class="nav-icon">⚙️</span>
+                    <span>Mi Perfil</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-user">
+                <div class="user-avatar">👤</div>
+                <div class="user-info-sidebar">
+                    <span class="user-name" id="userName">Propietario</span>
+                    <span class="user-role">Propietario</span>
+                </div>
+                <button class="btn-logout" onclick="cerrarSesion()" title="Cerrar Sesión">🚪</button>
+            </div>
+        </aside>
+
+        <!-- Contenido principal -->
+        <main class="panel-content">
+            <!-- Información Personal -->
+            <section id="informacion-section" class="panel-section active">
+                <div class="section-header">
+                    <h2>Mi Información</h2>
+                    <p>Datos personales y resumen de cuenta</p>
+                </div>
+
+                <div class="info-grid">
+                    <div class="profile-card">
+                        <div class="profile-header">
+                            <div class="profile-avatar">👤</div>
+                            <div class="profile-name">
+                                <h3 id="infoNombre">Cargando...</h3>
+                                <span id="infoDepartamentoTorre">Depto. - Torre -</span>
+                            </div>
+                        </div>
+                        <div class="profile-details">
+                            <div class="detail-item">
+                                <span class="detail-label">DNI</span>
+                                <span class="detail-value" id="infoDNI">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Correo</span>
+                                <span class="detail-value" id="infoCorreo">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Teléfono</span>
+                                <span class="detail-value" id="infoTelefono">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stats-mini">
+                        <div class="stat-mini-card warning">
+                            <span class="stat-mini-icon">📋</span>
+                            <div class="stat-mini-info">
+                                <span class="stat-mini-value" id="totalPendientes">0</span>
+                                <span class="stat-mini-label">Pendientes</span>
+                            </div>
+                            <span class="stat-mini-amount" id="montoPendiente">S/ 0.00</span>
+                        </div>
+                        <div class="stat-mini-card success">
+                            <span class="stat-mini-icon">✅</span>
+                            <div class="stat-mini-info">
+                                <span class="stat-mini-value" id="totalPagados">0</span>
+                                <span class="stat-mini-label">Pagados</span>
+                            </div>
+                            <span class="stat-mini-amount">Este mes</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Recibos Pendientes -->
+            <section id="pendientes-section" class="panel-section">
+                <div class="section-header">
+                    <h2>Recibos Pendientes</h2>
+                    <p>Recibos que aún no han sido pagados</p>
+                </div>
+
+                <div id="mensajeRecibos" class="mensaje"></div>
+
+                <div class="data-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Mes/Año</th>
+                                <th>Admin.</th>
+                                <th>Agua</th>
+                                <th>Luz</th>
+                                <th>Mant.</th>
+                                <th>Total</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaRecibosPendientes">
+                            <tr>
+                                <td colspan="8" class="empty-state">No hay recibos pendientes</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Recibos Pagados -->
+            <section id="pagados-section" class="panel-section">
+                <div class="section-header">
+                    <h2>Historial de Pagos</h2>
+                    <p>Recibos que ya han sido pagados</p>
+                </div>
+
+                <div class="data-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Mes/Año</th>
+                                <th>Total</th>
+                                <th>Fecha Pago</th>
+                                <th>Admin.</th>
+                                <th>Agua</th>
+                                <th>Luz</th>
+                                <th>Mant.</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaRecibosPagados">
+                            <tr>
+                                <td colspan="8" class="empty-state">No hay recibos pagados</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Perfil -->
+            <section id="perfil-section" class="panel-section">
+                <div class="section-header">
+                    <h2>Mi Perfil</h2>
+                    <p>Configuración de cuenta</p>
+                </div>
+
+                <div class="form-card" style="max-width: 500px;">
+                    <div class="form-card-header">
+                        <h3>Cambiar Contraseña</h3>
+                    </div>
+                    <form id="formCambiarContrasena" class="panel-form">
+                        <div class="form-group">
+                            <label for="nuevaContrasena">Nueva Contraseña *</label>
+                            <input type="password" id="nuevaContrasena" required minlength="6">
+                            <small>Mínimo 6 caracteres</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmarContrasena">Confirmar Contraseña *</label>
+                            <input type="password" id="confirmarContrasena" required minlength="6">
+                        </div>
+                        <div id="mensajePerfil" class="mensaje"></div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Cambiar Contraseña</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/propietario.js"></script>
+    <script>
+        // Override mostrarSeccion para el nuevo diseño
+        function mostrarSeccion(seccionId, btn) {
+            document.querySelectorAll('.panel-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.sidebar-nav .nav-item').forEach(b => b.classList.remove('active'));
+
+            document.getElementById(seccionId + '-section').classList.add('active');
+            if (btn) btn.classList.add('active');
+        }
+    </script>
+</body>
+</html>
