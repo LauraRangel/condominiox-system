@@ -1,5 +1,11 @@
 # CondominioX - Sistema de Gestión de Condominio
 
+**Universidad Tecnológica del Perú**
+
+**Estudiante:** Laura Isabel Rangel Teran
+
+---
+
 Sistema web para la gestión de condominios desarrollado con HTML, CSS y JavaScript.
 
 ## Estructura del Proyecto
