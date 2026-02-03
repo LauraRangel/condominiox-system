@@ -346,6 +346,24 @@ def listar_gastos():
     return jsonify({"items": rows})
 
 
+@app.delete("/api/gastos/<int:gasto_id>")
+def eliminar_gasto(gasto_id):
+    payload, err = _get_payload()
+    if err:
+        return jsonify({"error": err[0]}), err[1]
+    role_err = _require_roles(payload, "Administrador")
+    if role_err:
+        return jsonify({"error": role_err[0]}), role_err[1]
+
+    row = execute_returning(
+        "DELETE FROM gastos WHERE id = %s RETURNING id",
+        [gasto_id],
+    )
+    if not row:
+        return jsonify({"error": "Gasto no encontrado"}), 404
+    return jsonify({"deleted": gasto_id})
+
+
 @app.post("/api/gastos")
 def crear_gasto():
     payload, err = _get_payload()

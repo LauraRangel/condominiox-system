@@ -2,6 +2,12 @@ let perfil = null;
 let recibosPendientes = [];
 let recibosPagados = [];
 
+function toNumber(value) {
+    if (typeof value === 'number') return value;
+    const parsed = parseFloat(value);
+    return Number.isNaN(parsed) ? 0 : parsed;
+}
+
 function getPropietarioId() {
     const user = getUserData();
     return user && user.propietario_id ? user.propietario_id : null;
@@ -35,7 +41,11 @@ async function cargarEstadisticas() {
     document.getElementById('totalPendientes').textContent = recibosPendientes.length;
 
     const totalPendiente = recibosPendientes.reduce((sum, r) => {
-        return sum + r.monto_administracion + r.monto_agua + r.monto_luz + r.monto_mantenimiento;
+        return sum
+            + toNumber(r.monto_administracion)
+            + toNumber(r.monto_agua)
+            + toNumber(r.monto_luz)
+            + toNumber(r.monto_mantenimiento);
     }, 0);
     document.getElementById('montoPendiente').textContent = formatCurrency(totalPendiente);
 
@@ -66,8 +76,10 @@ async function cargarRecibosPendientes() {
 
     tbody.innerHTML = '';
     recibosPendientes.forEach(recibo => {
-        const total = recibo.monto_administracion + recibo.monto_agua +
-                      recibo.monto_luz + recibo.monto_mantenimiento;
+        const total = toNumber(recibo.monto_administracion)
+            + toNumber(recibo.monto_agua)
+            + toNumber(recibo.monto_luz)
+            + toNumber(recibo.monto_mantenimiento);
 
         const fecha = new Date(recibo.fecha_emision);
         const mesAnio = fecha.toLocaleDateString('es-PE', { month: 'long', year: 'numeric' });
@@ -140,8 +152,10 @@ async function cargarRecibosPagados() {
 
     tbody.innerHTML = '';
     recibosPagados.forEach(recibo => {
-        const total = recibo.monto_administracion + recibo.monto_agua +
-                      recibo.monto_luz + recibo.monto_mantenimiento;
+        const total = toNumber(recibo.monto_administracion)
+            + toNumber(recibo.monto_agua)
+            + toNumber(recibo.monto_luz)
+            + toNumber(recibo.monto_mantenimiento);
 
         const fecha = new Date(recibo.fecha_emision);
         const mesAnio = fecha.toLocaleDateString('es-PE', { month: 'long', year: 'numeric' });

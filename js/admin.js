@@ -307,9 +307,31 @@ function listarGastos() {
             <td><span style="background: var(--accent-gold); color: white; padding: 0.2rem 0.5rem; border-radius: 3px;">${gasto.tipo}</span></td>
             <td>${formatCurrency(gasto.monto)}</td>
             <td>${formatDate(gasto.fecha_registro)}</td>
+            <td>
+                <button class="btn btn-danger btn-sm" onclick="eliminarGasto(${gasto.id})">Eliminar</button>
+            </td>
         `;
         tbody.appendChild(tr);
     });
+}
+
+async function eliminarGasto(id) {
+    if (!confirm('¿Eliminar este gasto?')) {
+        return;
+    }
+
+    const { response, data } = await apiFetch(`/gastos/${id}`, {
+        method: 'DELETE'
+    });
+
+    if (!response.ok) {
+        alert(data.error || 'No se pudo eliminar');
+        return;
+    }
+
+    alert('Gasto eliminado');
+    await cargarGastos();
+    actualizarDashboard();
 }
 
 // ========================================
