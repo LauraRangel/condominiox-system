@@ -61,6 +61,14 @@ def _require_roles(payload, *roles):
     return None
 
 
+def _get_monto_administracion():
+    row = fetch_one("SELECT monto_administracion FROM configuracion ORDER BY id DESC LIMIT 1")
+    if row and row.get("monto_administracion") is not None:
+        value = row["monto_administracion"]
+        return float(value)
+    return 50.0
+
+
 @app.get("/api/health")
 def health():
     return jsonify({"status": "ok"})
@@ -167,6 +175,43 @@ def mi_perfil():
             },
         }
     )
+
+
+@app.get("/api/configuracion")
+def obtener_configuracion():
+    payload, err = _get_payload()
+    if err:
+        return jsonify({"error": err[0]}), err[1]
+    role_err = _require_roles(payload, "Administrador")
+    if role_err:
+        return jsonify({"error": role_err[0]}), role_err[1]
+
+    return jsonify({"monto_administracion": _get_monto_administracion()})
+
+
+@app.put("/api/configuracion")
+def actualizar_configuracion():
+    payload, err = _get_payload()
+    if err:
+        return jsonify({"error": err[0]}), err[1]
+    role_err = _require_roles(payload, "Administrador")
+    if role_err:
+        return jsonify({"error": role_err[0]}), role_err[1]
+
+    body = request.get_json(silent=True) or {}
+    monto = body.get("monto_administracion")
+    if monto is None:
+        return jsonify({"error": "Monto de administración requerido"}), 400
+
+    row = execute_returning(
+        """
+        INSERT INTO configuracion (monto_administracion)
+        VALUES (%s)
+        RETURNING monto_administracion
+        """,
+        [monto],
+    )
+    return jsonify({"monto_administracion": row["monto_administracion"]})
 
 
 @app.get("/api/propietarios")
@@ -310,12 +355,20 @@ def crear_gasto():
         return jsonify({"error": role_err[0]}), role_err[1]
 
     body = request.get_json(silent=True) or {}
-    required = ["proveedor", "concepto", "monto", "tipo", "fecha_registro"]
+    required = ["proveedor", "concepto", "monto", "tipo"]
     if not all(body.get(k) for k in required):
         return jsonify({"error": "Datos incompletos"}), 400
 
-    if body.get("tipo") not in ("mantenimiento", "luz"):
+    if body.get("tipo") not in ("mantenimiento", "luz", "agua"):
         return jsonify({"error": "Tipo de gasto inválido"}), 400
+
+    fecha_registro = body.get("fecha_registro")
+    mes = body.get("mes")
+    if not fecha_registro:
+        if mes:
+            fecha_registro = f"{mes}-01"
+        else:
+            return jsonify({"error": "Fecha o mes requerido"}), 400
 
     row = execute_returning(
         """
@@ -328,7 +381,7 @@ def crear_gasto():
             body["concepto"].strip(),
             body["monto"],
             body["tipo"],
-            body["fecha_registro"],
+            fecha_registro,
         ],
     )
     return jsonify(row), 201
@@ -366,18 +419,30 @@ def generar_recibos():
     if not propietarios:
         return jsonify({"error": "No hay propietarios registrados"}), 400
 
-    gasto_total = fetch_one(
-        "SELECT COALESCE(SUM(monto), 0) AS total FROM gastos",
-    )
-    total = gasto_total["total"] or 0
-    if not isinstance(total, Decimal):
-        total = Decimal(str(total))
-    gasto_por_prop = (total / Decimal(len(propietarios)))
+    def _sum_por_tipo(tipo):
+        row = fetch_one(
+            """
+            SELECT COALESCE(SUM(monto), 0) AS total
+            FROM gastos
+            WHERE tipo = %s
+              AND TO_CHAR(fecha_registro, 'YYYY-MM') = %s
+            """,
+            [tipo, mes],
+        )
+        total_tipo = row["total"] or 0
+        if not isinstance(total_tipo, Decimal):
+            total_tipo = Decimal(str(total_tipo))
+        return total_tipo
 
-    monto_administracion = Decimal("50.00")
-    monto_agua = Decimal("30.00")
-    monto_luz = (gasto_por_prop * Decimal("0.4")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    monto_mantenimiento = (gasto_por_prop * Decimal("0.6")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    total_agua = _sum_por_tipo("agua")
+    total_luz = _sum_por_tipo("luz")
+    total_mantenimiento = _sum_por_tipo("mantenimiento")
+
+    divisor = Decimal(len(propietarios))
+    monto_administracion = Decimal(str(_get_monto_administracion()))
+    monto_agua = (total_agua / divisor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    monto_luz = (total_luz / divisor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    monto_mantenimiento = (total_mantenimiento / divisor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     generados = 0
     recibos = []

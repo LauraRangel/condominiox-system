@@ -89,6 +89,24 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="form-card" style="margin-top: 1.5rem;">
+                    <div class="form-card-header">
+                        <h3>Configuración de Administración</h3>
+                    </div>
+                    <form id="formConfigAdmin" class="panel-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="montoAdministracion">Monto Administración (S/)</label>
+                                <input type="number" id="montoAdministracion" step="0.01" min="0" required>
+                            </div>
+                        </div>
+                        <div id="mensajeConfigAdmin" class="mensaje"></div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Guardar</button>
+                        </div>
+                    </form>
+                </div>
             </section>
 
             <!-- Propietarios -->
@@ -206,6 +224,9 @@
                     <button class="btn btn-warning" onclick="mostrarFormulario('agregarGastoLuz')">
                         ⚡ Gasto de Luz
                     </button>
+                    <button class="btn btn-info" onclick="mostrarFormulario('agregarGastoAgua')">
+                        💧 Gasto de Agua
+                    </button>
                 </div>
 
                 <!-- Formulario Gasto Mantenimiento -->
@@ -253,10 +274,6 @@
                                 <label for="gastoLuzMonto">Monto Total (S/) *</label>
                                 <input type="number" id="gastoLuzMonto" step="0.01" min="0" required>
                             </div>
-                            <div class="form-group">
-                                <label for="gastoLuzFecha">Fecha *</label>
-                                <input type="date" id="gastoLuzFecha" required>
-                            </div>
                         </div>
                         <div class="form-group">
                             <label for="gastoLuzMes">Mes del Recibo</label>
@@ -266,6 +283,30 @@
                         <div class="form-actions">
                             <button type="submit" class="btn btn-primary">Registrar</button>
                             <button type="button" class="btn btn-secondary" onclick="cerrarFormulario('agregarGastoLuz')">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div id="formAgregarGastoAgua" class="form-card hidden">
+                    <div class="form-card-header">
+                        <h3>Gasto de Agua</h3>
+                        <button class="btn-close" onclick="cerrarFormulario('agregarGastoAgua')">×</button>
+                    </div>
+                    <form id="formGastoAgua" class="panel-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="gastoAguaMonto">Monto Total (S/) *</label>
+                                <input type="number" id="gastoAguaMonto" step="0.01" min="0" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="gastoAguaMes">Mes del Recibo</label>
+                            <input type="month" id="gastoAguaMes" required>
+                        </div>
+                        <div id="mensajeGastoAgua" class="mensaje"></div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Registrar</button>
+                            <button type="button" class="btn btn-secondary" onclick="cerrarFormulario('agregarGastoAgua')">Cancelar</button>
                         </div>
                     </form>
                 </div>

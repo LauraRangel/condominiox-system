@@ -24,8 +24,13 @@ CREATE TABLE IF NOT EXISTS gastos (
     proveedor VARCHAR(120) NOT NULL,
     concepto TEXT NOT NULL,
     monto NUMERIC(10,2) NOT NULL,
-    tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('mantenimiento', 'luz')),
+    tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('mantenimiento', 'luz', 'agua')),
     fecha_registro DATE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS configuracion (
+    id SERIAL PRIMARY KEY,
+    monto_administracion NUMERIC(10,2) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS recibos (

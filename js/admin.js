@@ -25,7 +25,7 @@ function actualizarDashboard() {
 }
 
 async function cargarDashboard() {
-    await Promise.all([cargarPropietarios(), cargarGastos(), cargarRecibos()]);
+    await Promise.all([cargarPropietarios(), cargarGastos(), cargarRecibos(), cargarConfiguracion()]);
     actualizarDashboard();
 }
 
@@ -152,6 +152,40 @@ async function cargarGastos() {
     listarGastos();
 }
 
+// ========================================
+// CONFIGURACIÓN
+// ========================================
+
+async function cargarConfiguracion() {
+    const input = document.getElementById('montoAdministracion');
+    if (!input) return;
+
+    const { response, data } = await apiFetch('/configuracion');
+    if (!response.ok) {
+        console.error(data);
+        return;
+    }
+    input.value = data.monto_administracion;
+}
+
+if (document.getElementById('formConfigAdmin')) {
+    document.getElementById('formConfigAdmin').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const monto = parseFloat(document.getElementById('montoAdministracion').value);
+
+        const { response, data } = await apiFetch('/configuracion', {
+            method: 'PUT',
+            body: JSON.stringify({ monto_administracion: monto })
+        });
+
+        if (!response.ok) {
+            mostrarMensaje('mensajeConfigAdmin', data.error || 'No se pudo guardar', 'error');
+            return;
+        }
+        mostrarMensaje('mensajeConfigAdmin', 'Configuración guardada', 'success');
+    });
+}
+
 if (document.getElementById('formGasto')) {
     document.getElementById('formGasto').addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -196,7 +230,7 @@ if (document.getElementById('formGastoLuz')) {
             concepto: `Gasto de luz común - ${mes}`,
             monto: parseFloat(document.getElementById('gastoLuzMonto').value),
             tipo: 'luz',
-            fecha_registro: document.getElementById('gastoLuzFecha').value
+            mes: mes
         };
 
         const { response, data } = await apiFetch('/gastos', {
@@ -216,6 +250,41 @@ if (document.getElementById('formGastoLuz')) {
 
         setTimeout(() => {
             cerrarFormulario('agregarGastoLuz');
+        }, 2000);
+    });
+}
+
+if (document.getElementById('formGastoAgua')) {
+    document.getElementById('formGastoAgua').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const mes = document.getElementById('gastoAguaMes').value;
+
+        const nuevoGasto = {
+            proveedor: 'Sedapal',
+            concepto: `Gasto de agua - ${mes}`,
+            monto: parseFloat(document.getElementById('gastoAguaMonto').value),
+            tipo: 'agua',
+            mes: mes
+        };
+
+        const { response, data } = await apiFetch('/gastos', {
+            method: 'POST',
+            body: JSON.stringify(nuevoGasto)
+        });
+
+        if (!response.ok) {
+            mostrarMensaje('mensajeGastoAgua', data.error || 'Error al registrar', 'error');
+            return;
+        }
+
+        mostrarMensaje('mensajeGastoAgua', 'Gasto de agua registrado', 'success');
+        document.getElementById('formGastoAgua').reset();
+        await cargarGastos();
+        actualizarDashboard();
+
+        setTimeout(() => {
+            cerrarFormulario('agregarGastoAgua');
         }, 2000);
     });
 }
