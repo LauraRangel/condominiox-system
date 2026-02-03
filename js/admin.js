@@ -413,9 +413,32 @@ function listarRecibos(tipo = 'pendientes', items = []) {
             <td>${estado}</td>
             <td>${formatDate(recibo.fecha_emision)}</td>
             <td>${formatDate(recibo.fecha_pago)}</td>
+            <td>
+                <button class="btn btn-danger btn-sm" onclick="eliminarRecibo(${recibo.id})">Eliminar</button>
+            </td>
         `;
         tbody.appendChild(tr);
     });
+}
+
+async function eliminarRecibo(id) {
+    if (!confirm('¿Eliminar este recibo?')) {
+        return;
+    }
+
+    const { response, data } = await apiFetch(`/recibos/${id}`, {
+        method: 'DELETE'
+    });
+
+    if (!response.ok) {
+        alert(data.error || 'No se pudo eliminar');
+        return;
+    }
+
+    alert('Recibo eliminado');
+    await cargarRecibos('pendientes');
+    await cargarRecibos('pagados');
+    actualizarDashboard();
 }
 
 // ========================================

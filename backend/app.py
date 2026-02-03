@@ -603,6 +603,24 @@ def recalcular_recibos():
     return jsonify({"actualizados": len(items), "items": items})
 
 
+@app.delete("/api/recibos/<int:recibo_id>")
+def eliminar_recibo(recibo_id):
+    payload, err = _get_payload()
+    if err:
+        return jsonify({"error": err[0]}), err[1]
+    role_err = _require_roles(payload, "Administrador")
+    if role_err:
+        return jsonify({"error": role_err[0]}), role_err[1]
+
+    row = execute_returning(
+        "DELETE FROM recibos WHERE id = %s RETURNING id",
+        [recibo_id],
+    )
+    if not row:
+        return jsonify({"error": "Recibo no encontrado"}), 404
+    return jsonify({"deleted": recibo_id})
+
+
 @app.get("/api/recibos")
 def listar_recibos_admin():
     # Usa MatrizRecibos para organizar recibos por mes/propietario.
