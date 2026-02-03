@@ -382,12 +382,8 @@ def crear_gasto():
         return jsonify({"error": "Tipo de gasto inválido"}), 400
 
     fecha_registro = body.get("fecha_registro")
-    mes = body.get("mes")
     if not fecha_registro:
-        if mes:
-            fecha_registro = f"{mes}-01"
-        else:
-            return jsonify({"error": "Fecha o mes requerido"}), 400
+        return jsonify({"error": "Fecha requerida"}), 400
 
     row = execute_returning(
         """

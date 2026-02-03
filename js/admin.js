@@ -230,14 +230,12 @@ if (document.getElementById('formGastoLuz')) {
     document.getElementById('formGastoLuz').addEventListener('submit', async function(e) {
         e.preventDefault();
 
-        const mes = document.getElementById('gastoLuzMes').value;
-
         const nuevoGasto = {
             proveedor: 'Luz del Sur',
-            concepto: `Gasto de luz común - ${mes}`,
+            concepto: 'Gasto de luz común',
             monto: parseFloat(document.getElementById('gastoLuzMonto').value),
             tipo: 'luz',
-            mes: mes
+            fecha_registro: document.getElementById('gastoLuzFecha').value
         };
 
         const { response, data } = await apiFetch('/gastos', {
@@ -265,14 +263,12 @@ if (document.getElementById('formGastoAgua')) {
     document.getElementById('formGastoAgua').addEventListener('submit', async function(e) {
         e.preventDefault();
 
-        const mes = document.getElementById('gastoAguaMes').value;
-
         const nuevoGasto = {
             proveedor: 'Sedapal',
-            concepto: `Gasto de agua - ${mes}`,
+            concepto: 'Gasto de agua',
             monto: parseFloat(document.getElementById('gastoAguaMonto').value),
             tipo: 'agua',
-            mes: mes
+            fecha_registro: document.getElementById('gastoAguaFecha').value
         };
 
         const { response, data } = await apiFetch('/gastos', {
