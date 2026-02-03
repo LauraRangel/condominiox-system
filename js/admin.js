@@ -1,5 +1,5 @@
 // Datos de ejemplo (se pueden agregar más durante la sesión)
-let propietarios = [
+const propietariosDemo = [
     {
         id: 1,
         nombre: 'Juan Carlos',
@@ -32,7 +32,10 @@ let propietarios = [
     }
 ];
 
-let gastos = [
+const propietariosList = new window.Estructuras.ListaPropietarios();
+propietariosDemo.forEach(prop => propietariosList.insertar(prop));
+
+const gastosDemo = [
     {
         id: 1,
         proveedor: 'Mantenimiento General',
@@ -51,7 +54,10 @@ let gastos = [
     }
 ];
 
-let recibos = [
+const gastosList = new window.Estructuras.ListaGastos();
+gastosDemo.forEach(gasto => gastosList.agregar(gasto));
+
+const recibosDemo = [
     {
         id_recibo: 1,
         propietario_id: 1,
@@ -82,10 +88,20 @@ let recibos = [
     }
 ];
 
+const recibos = recibosDemo.slice();
+const matrizRecibos = new window.Estructuras.MatrizRecibos();
+recibos.forEach(recibo => {
+    const mes = recibo.fecha_emision.slice(0, 7);
+    matrizRecibos.setRecibo(mes, recibo.propietario_id, recibo);
+});
+
 // Obtener siguiente ID
 function obtenerSiguienteId(lista, campo = 'id') {
-    if (lista.length === 0) return 1;
-    return Math.max(...lista.map(item => item[campo])) + 1;
+    const items = Array.isArray(lista)
+        ? lista
+        : (lista && typeof lista.toArray === 'function' ? lista.toArray() : []);
+    if (items.length === 0) return 1;
+    return Math.max(...items.map(item => item[campo])) + 1;
 }
 
 // ========================================
@@ -93,16 +109,23 @@ function obtenerSiguienteId(lista, campo = 'id') {
 // ========================================
 
 function cargarDashboard() {
-    document.getElementById('totalPropietarios').textContent = propietarios.length;
+    document.getElementById('totalPropietarios').textContent = propietariosList.length;
 
     const recibosPendientes = recibos.filter(r => !r.pagado);
     document.getElementById('recibosPendientes').textContent = recibosPendientes.length;
 
-    const totalGastos = gastos.reduce((sum, g) => sum + parseFloat(g.monto), 0);
+    const totalGastos = gastosList.totalizar();
     document.getElementById('gastosDelMes').textContent = formatCurrency(totalGastos);
 
     const recibosPagados = recibos.filter(r => r.pagado);
     document.getElementById('recibosPagados').textContent = recibosPagados.length;
+
+    const mesActual = new Date().toISOString().slice(0, 7);
+    const totalRecibosMes = matrizRecibos.totalPorMes(mesActual);
+    const recibosPagadosElement = document.getElementById('recibosPagados');
+    if (recibosPagadosElement) {
+        recibosPagadosElement.title = `Total emitido ${mesActual}: ${formatCurrency(totalRecibosMes)}`;
+    }
 }
 
 // ========================================
@@ -112,6 +135,7 @@ function cargarDashboard() {
 function listarPropietarios() {
     const tbody = document.getElementById('tablaPropietarios');
 
+    const propietarios = propietariosList.toArray();
     if (propietarios.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No hay propietarios registrados</td></tr>';
         return;
@@ -141,7 +165,7 @@ if (document.getElementById('formPropietario')) {
         e.preventDefault();
 
         const nuevoPropietario = {
-            id: obtenerSiguienteId(propietarios),
+            id: obtenerSiguienteId(propietariosList),
             nombre: document.getElementById('propNombre').value.trim(),
             apellido: document.getElementById('propApellido').value.trim(),
             dni: document.getElementById('propDNI').value.trim(),
@@ -158,13 +182,14 @@ if (document.getElementById('formPropietario')) {
         }
 
         // Validar DNI único
+        const propietarios = propietariosList.toArray();
         if (propietarios.some(p => p.dni === nuevoPropietario.dni)) {
             mostrarMensaje('mensajePropietario', 'Ya existe un propietario con ese DNI', 'error');
             return;
         }
 
         // Agregar nuevo propietario
-        propietarios.push(nuevoPropietario);
+        propietariosList.insertar(nuevoPropietario);
 
         mostrarMensaje('mensajePropietario', 'Propietario registrado exitosamente', 'success');
         document.getElementById('formPropietario').reset();
@@ -183,10 +208,14 @@ function eliminarPropietario(id) {
         return;
     }
 
-    propietarios = propietarios.filter(p => p.id !== id);
-    alert('Propietario eliminado exitosamente');
-    listarPropietarios();
-    cargarDashboard();
+    const eliminado = propietariosList.eliminarPorId(id);
+    if (eliminado) {
+        alert('Propietario eliminado exitosamente');
+        listarPropietarios();
+        cargarDashboard();
+    } else {
+        alert('No se encontró el propietario');
+    }
 }
 
 // ========================================
@@ -199,7 +228,7 @@ if (document.getElementById('formGasto')) {
         e.preventDefault();
 
         const nuevoGasto = {
-            id: obtenerSiguienteId(gastos),
+            id: obtenerSiguienteId(gastosList),
             proveedor: document.getElementById('gastoProveedor').value.trim(),
             concepto: document.getElementById('gastoConcepto').value.trim(),
             monto: parseFloat(document.getElementById('gastoMonto').value),
@@ -207,7 +236,7 @@ if (document.getElementById('formGasto')) {
             fecha_registro: document.getElementById('gastoFecha').value
         };
 
-        gastos.push(nuevoGasto);
+        gastosList.agregar(nuevoGasto);
 
         mostrarMensaje('mensajeGasto', 'Gasto registrado exitosamente', 'success');
         document.getElementById('formGasto').reset();
@@ -228,7 +257,7 @@ if (document.getElementById('formGastoLuz')) {
         const mes = document.getElementById('gastoLuzMes').value;
 
         const nuevoGasto = {
-            id: obtenerSiguienteId(gastos),
+            id: obtenerSiguienteId(gastosList),
             proveedor: 'Luz del Sur',
             concepto: `Gasto de luz común - ${mes}`,
             monto: parseFloat(document.getElementById('gastoLuzMonto').value),
@@ -236,7 +265,7 @@ if (document.getElementById('formGastoLuz')) {
             fecha_registro: document.getElementById('gastoLuzFecha').value
         };
 
-        gastos.push(nuevoGasto);
+        gastosList.agregar(nuevoGasto);
 
         mostrarMensaje('mensajeGastoLuz', 'Gasto de luz registrado', 'success');
         document.getElementById('formGastoLuz').reset();
@@ -252,6 +281,7 @@ if (document.getElementById('formGastoLuz')) {
 // Listar gastos
 function listarGastos() {
     const tbody = document.getElementById('tablaGastos');
+    const gastos = gastosList.toArray();
 
     if (gastos.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No hay gastos registrados</td></tr>';
@@ -278,6 +308,7 @@ function listarGastos() {
 // ========================================
 
 function generarRecibos() {
+    const propietarios = propietariosList.toArray();
     if (propietarios.length === 0) {
         alert('No hay propietarios registrados para generar recibos');
         return;
@@ -291,7 +322,7 @@ function generarRecibos() {
     const mesActual = fechaActual.toISOString().slice(0, 7);
 
     // Calcular montos
-    const totalGastos = gastos.reduce((sum, g) => sum + parseFloat(g.monto), 0);
+    const totalGastos = gastosList.totalizar();
     const gastoPorPropietario = totalGastos / propietarios.length;
 
     const montoAdministracion = 50.00;
@@ -328,6 +359,7 @@ function generarRecibos() {
             };
 
             recibos.push(nuevoRecibo);
+            matrizRecibos.setRecibo(mesActual, prop.id, nuevoRecibo);
             recibosGenerados++;
         }
     });
