@@ -2,6 +2,7 @@ let propietarios = [];
 let gastos = [];
 let recibos = [];
 let currentRecibosView = 'pendientes';
+let currentMesFilter = '';
 
 function toNumber(value) {
     if (typeof value === 'number') return value;
@@ -416,7 +417,10 @@ async function recalcularRecibos() {
 }
 
 async function cargarRecibos(estado = '') {
-    const query = estado ? `?estado=${estado}` : '';
+    const params = [];
+    if (estado) params.push(`estado=${estado}`);
+    if (currentMesFilter) params.push(`mes=${currentMesFilter}`);
+    const query = params.length ? `?${params.join('&')}` : '';
     const { response, data } = await apiFetch(`/recibos${query}`);
     if (!response.ok) {
         console.error(data);
@@ -424,6 +428,7 @@ async function cargarRecibos(estado = '') {
     }
     if (!estado) {
         recibos = data.items || [];
+        actualizarResumenMensual(data.resumen_mensual || []);
     }
     if (estado) {
         listarRecibos(estado, data.items || []);
@@ -497,6 +502,35 @@ function setRecibosVista(vista) {
     actualizarBotonesRecibos();
 }
 
+function setFiltroMesRecibos() {
+    const input = document.getElementById('filtroMesRecibos');
+    currentMesFilter = input && input.value ? input.value : '';
+    cargarRecibos(currentRecibosView);
+}
+
+function actualizarResumenMensual(items) {
+    const tbody = document.getElementById('tablaResumenMensual');
+    if (!tbody) return;
+
+    if (!items || items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Sin datos</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = '';
+    items.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${row.mes}</td>
+            <td>${formatCurrency(row.emitido)}</td>
+            <td>${formatCurrency(row.pagado)}</td>
+            <td>${formatCurrency(row.pendiente)}</td>
+            <td>${row.cantidad}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
 function actualizarBotonesRecibos() {
     const btnPendientes = document.getElementById('btnRecibosPendientes');
     const btnPagados = document.getElementById('btnRecibosPagados');
@@ -539,6 +573,10 @@ window.addEventListener('DOMContentLoaded', function() {
     const mesInput = document.getElementById('mesRecibos');
     if (mesInput && !mesInput.value) {
         mesInput.value = new Date().toISOString().slice(0, 7);
+    }
+    const filtroMes = document.getElementById('filtroMesRecibos');
+    if (filtroMes) {
+        filtroMes.addEventListener('change', setFiltroMesRecibos);
     }
     cargarDashboard();
     setRecibosVista('pendientes');

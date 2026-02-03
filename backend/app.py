@@ -646,12 +646,16 @@ def listar_recibos_admin():
         return jsonify({"error": role_err[0]}), role_err[1]
 
     estado = (request.args.get("estado") or "").strip().lower()
+    mes_filter = (request.args.get("mes") or "").strip()
     filtros = []
     params = []
     if estado == "pendientes":
         filtros.append("r.pagado = FALSE")
     elif estado == "pagados":
         filtros.append("r.pagado = TRUE")
+    if mes_filter:
+        filtros.append("TO_CHAR(r.fecha_emision, 'YYYY-MM') = %s")
+        params.append(mes_filter)
 
     where = f"WHERE {' AND '.join(filtros)}" if filtros else ""
     rows = fetch_all(
@@ -670,6 +674,7 @@ def listar_recibos_admin():
 
     matriz = MatrizRecibos()
     items = []
+    resumen = {}
     for row in rows:
         recibo = {
             "id": row["id"],
@@ -692,7 +697,14 @@ def listar_recibos_admin():
         recibo["saldo"] = _recibo_saldo(recibo)
         items.append(recibo)
 
-    return jsonify({"items": items})
+        bucket = resumen.setdefault(mes, {"mes": mes, "emitido": 0, "pagado": 0, "pendiente": 0, "cantidad": 0})
+        bucket["emitido"] += recibo["total"]
+        bucket["pagado"] += recibo["monto_pagado"] or 0
+        bucket["pendiente"] += recibo["saldo"]
+        bucket["cantidad"] += 1
+
+    resumen_list = sorted(resumen.values(), key=lambda x: x["mes"], reverse=True)
+    return jsonify({"items": items, "resumen_mensual": resumen_list})
 
 
 @app.get("/api/recibos/propietario/<int:propietario_id>")

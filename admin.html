@@ -340,7 +340,32 @@
                     <p>Genera y administra los recibos de mantenimiento</p>
                 </div>
 
+                <div class="form-card" style="margin-bottom: 1rem;">
+                    <div class="form-card-header">
+                        <h3>Resumen por Mes</h3>
+                    </div>
+                    <div class="data-table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Mes</th>
+                                    <th>Total Emitido</th>
+                                    <th>Total Pagado</th>
+                                    <th>Saldo Pendiente</th>
+                                    <th>Recibos</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaResumenMensual">
+                                <tr>
+                                    <td colspan="5" class="empty-state">Sin datos</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <div class="action-buttons">
+                    <input type="month" id="filtroMesRecibos" class="input-inline" title="Filtrar por mes">
                     <input type="date" id="fechaRecibos" class="input-inline" title="Fecha de generación">
                     <button class="btn btn-primary" onclick="generarRecibos()">
                         📄 Generar Recibos
