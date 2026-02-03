@@ -41,11 +41,12 @@ async function cargarEstadisticas() {
     document.getElementById('totalPendientes').textContent = recibosPendientes.length;
 
     const totalPendiente = recibosPendientes.reduce((sum, r) => {
-        return sum
-            + toNumber(r.monto_administracion)
+        const total = toNumber(r.monto_administracion)
             + toNumber(r.monto_agua)
             + toNumber(r.monto_luz)
             + toNumber(r.monto_mantenimiento);
+        const pagado = toNumber(r.monto_pagado);
+        return sum + (total - pagado);
     }, 0);
     document.getElementById('montoPendiente').textContent = formatCurrency(totalPendiente);
 
@@ -80,9 +81,10 @@ async function cargarRecibosPendientes() {
             + toNumber(recibo.monto_agua)
             + toNumber(recibo.monto_luz)
             + toNumber(recibo.monto_mantenimiento);
+        const pagado = toNumber(recibo.monto_pagado);
+        const saldo = recibo.saldo !== undefined ? toNumber(recibo.saldo) : (total - pagado);
 
-        const fecha = new Date(recibo.fecha_emision);
-        const mesAnio = fecha.toLocaleDateString('es-PE', { month: 'long', year: 'numeric' });
+        const mesAnio = formatMonthYear(recibo.fecha_emision);
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -93,6 +95,8 @@ async function cargarRecibosPendientes() {
             <td>${formatCurrency(recibo.monto_luz)}</td>
             <td>${formatCurrency(recibo.monto_mantenimiento)}</td>
             <td><strong>${formatCurrency(total)}</strong></td>
+            <td>${formatCurrency(pagado)}</td>
+            <td>${formatCurrency(saldo)}</td>
             <td>
                 <button class="btn btn-success" onclick="pagarRecibo(${recibo.id})"
                         style="padding: 0.4rem 0.8rem;">
@@ -156,15 +160,18 @@ async function cargarRecibosPagados() {
             + toNumber(recibo.monto_agua)
             + toNumber(recibo.monto_luz)
             + toNumber(recibo.monto_mantenimiento);
+        const pagado = toNumber(recibo.monto_pagado);
+        const saldo = recibo.saldo !== undefined ? toNumber(recibo.saldo) : (total - pagado);
 
-        const fecha = new Date(recibo.fecha_emision);
-        const mesAnio = fecha.toLocaleDateString('es-PE', { month: 'long', year: 'numeric' });
+        const mesAnio = formatMonthYear(recibo.fecha_emision);
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${recibo.id}</td>
             <td>${mesAnio}</td>
             <td><strong>${formatCurrency(total)}</strong></td>
+            <td>${formatCurrency(pagado)}</td>
+            <td>${formatCurrency(saldo)}</td>
             <td>${formatDate(recibo.fecha_pago)}</td>
             <td>${formatCurrency(recibo.monto_administracion)}</td>
             <td>${formatCurrency(recibo.monto_agua)}</td>

@@ -9,6 +9,17 @@ function toNumber(value) {
     return Number.isNaN(parsed) ? 0 : parsed;
 }
 
+function formatDateRaw(dateString) {
+    if (!dateString) return '-';
+    const safe = String(dateString).slice(0, 10);
+    const parts = safe.split('-');
+    if (parts.length === 3) {
+        const [year, month, day] = parts;
+        return `${day}/${month}/${year}`;
+    }
+    return safe;
+}
+
 function obtenerSiguienteId(items, campo = 'id') {
     if (!items || items.length === 0) return 1;
     return Math.max(...items.map(item => item[campo])) + 1;
@@ -311,7 +322,7 @@ function listarGastos() {
             <td>${gasto.concepto}</td>
             <td><span style="background: var(--accent-gold); color: white; padding: 0.2rem 0.5rem; border-radius: 3px;">${gasto.tipo}</span></td>
             <td>${formatCurrency(gasto.monto)}</td>
-            <td>${formatDate(gasto.fecha_registro)}</td>
+            <td>${formatDateRaw(gasto.fecha_registro)}</td>
             <td>
                 <button class="btn btn-danger btn-sm" onclick="eliminarGasto(${gasto.id})">Eliminar</button>
             </td>

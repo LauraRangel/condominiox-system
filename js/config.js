@@ -90,6 +90,23 @@ function formatDate(dateString) {
     });
 }
 
+function formatMonthYear(dateString) {
+    if (!dateString) return '-';
+    const safe = String(dateString).slice(0, 10);
+    const parts = safe.split('-').map(Number);
+    if (parts.length === 3 && parts.every(n => !Number.isNaN(n))) {
+        const [year, month] = parts;
+        const meses = [
+            'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+            'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+        ];
+        const nombreMes = meses[month - 1] || '';
+        return `${nombreMes} ${year}`.trim();
+    }
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-PE', { month: 'long', year: 'numeric' });
+}
+
 // Formatear moneda
 function formatCurrency(amount) {
     return `S/ ${parseFloat(amount).toFixed(2)}`;
