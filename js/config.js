@@ -78,12 +78,9 @@ function formatDate(dateString) {
     const parts = safe.split('-').map(Number);
     if (parts.length === 3 && parts.every(n => !Number.isNaN(n))) {
         const [year, month, day] = parts;
-        const date = new Date(year, month - 1, day);
-        return date.toLocaleDateString('es-PE', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
+        const dd = String(day).padStart(2, '0');
+        const mm = String(month).padStart(2, '0');
+        return `${dd}/${mm}/${year}`;
     }
     const date = new Date(dateString);
     return date.toLocaleDateString('es-PE', {
