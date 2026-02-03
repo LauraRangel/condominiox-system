@@ -74,7 +74,8 @@ function requireAuth() {
 // Formatear fecha
 function formatDate(dateString) {
     if (!dateString) return '-';
-    const parts = dateString.split('-').map(Number);
+    const safe = String(dateString).slice(0, 10);
+    const parts = safe.split('-').map(Number);
     if (parts.length === 3 && parts.every(n => !Number.isNaN(n))) {
         const [year, month, day] = parts;
         const date = new Date(year, month - 1, day);
