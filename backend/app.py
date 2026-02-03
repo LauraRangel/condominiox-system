@@ -1,5 +1,6 @@
 import os
 import datetime as dt
+from decimal import Decimal, ROUND_HALF_UP
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -368,11 +369,15 @@ def generar_recibos():
     gasto_total = fetch_one(
         "SELECT COALESCE(SUM(monto), 0) AS total FROM gastos",
     )
-    gasto_por_prop = (gasto_total["total"] or 0) / len(propietarios)
-    monto_administracion = 50.0
-    monto_agua = 30.0
-    monto_luz = round(gasto_por_prop * 0.4, 2)
-    monto_mantenimiento = round(gasto_por_prop * 0.6, 2)
+    total = gasto_total["total"] or 0
+    if not isinstance(total, Decimal):
+        total = Decimal(str(total))
+    gasto_por_prop = (total / Decimal(len(propietarios)))
+
+    monto_administracion = Decimal("50.00")
+    monto_agua = Decimal("30.00")
+    monto_luz = (gasto_por_prop * Decimal("0.4")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    monto_mantenimiento = (gasto_por_prop * Decimal("0.6")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     generados = 0
     recibos = []
@@ -402,8 +407,8 @@ def generar_recibos():
                 prop["id"],
                 monto_administracion,
                 monto_agua,
-                monto_luz,
-                monto_mantenimiento,
+                float(monto_luz),
+                float(monto_mantenimiento),
                 fecha_emision,
             ],
         )
