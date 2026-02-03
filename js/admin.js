@@ -1,6 +1,13 @@
 let propietarios = [];
 let gastos = [];
 let recibos = [];
+let currentRecibosView = 'pendientes';
+
+function toNumber(value) {
+    if (typeof value === 'number') return value;
+    const parsed = parseFloat(value);
+    return Number.isNaN(parsed) ? 0 : parsed;
+}
 
 function obtenerSiguienteId(items, campo = 'id') {
     if (!items || items.length === 0) return 1;
@@ -293,12 +300,14 @@ function listarGastos() {
     const tbody = document.getElementById('tablaGastos');
 
     if (gastos.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No hay gastos registrados</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No hay gastos registrados</td></tr>';
         return;
     }
 
     tbody.innerHTML = '';
+    let total = 0;
     gastos.forEach(gasto => {
+        total += toNumber(gasto.monto);
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${gasto.id}</td>
@@ -313,6 +322,15 @@ function listarGastos() {
         `;
         tbody.appendChild(tr);
     });
+
+    const trTotal = document.createElement('tr');
+    trTotal.className = 'total-row';
+    trTotal.innerHTML = `
+        <td colspan="4">Total</td>
+        <td>${formatCurrency(total)}</td>
+        <td colspan="2"></td>
+    `;
+    tbody.appendChild(trTotal);
 }
 
 async function eliminarGasto(id) {
@@ -359,8 +377,8 @@ async function generarRecibos() {
     }
 
     alert(`Se generaron ${data.generados} recibos exitosamente`);
-    await cargarRecibos('pendientes');
-    await cargarRecibos('pagados');
+    await cargarRecibos();
+    await cargarRecibos(currentRecibosView);
     actualizarDashboard();
 }
 
@@ -385,8 +403,8 @@ async function recalcularRecibos() {
     }
 
     alert(`Se recalcularon ${data.actualizados} recibos`);
-    await cargarRecibos('pendientes');
-    await cargarRecibos('pagados');
+    await cargarRecibos();
+    await cargarRecibos(currentRecibosView);
     actualizarDashboard();
 }
 
@@ -416,13 +434,16 @@ function listarRecibos(tipo = 'pendientes', items = []) {
 
     tbody.innerHTML = '';
     filtrados.forEach(recibo => {
-        const total = recibo.monto_administracion + recibo.monto_agua + recibo.monto_luz + recibo.monto_mantenimiento;
+        const total = toNumber(recibo.monto_administracion)
+            + toNumber(recibo.monto_agua)
+            + toNumber(recibo.monto_luz)
+            + toNumber(recibo.monto_mantenimiento);
         const estado = recibo.pagado
             ? '<span style="color: green;">✅ Pagado</span>'
             : '<span style="color: orange;">⏳ Pendiente</span>';
 
         const tr = document.createElement('tr');
-        const pagado = recibo.monto_pagado || 0;
+        const pagado = toNumber(recibo.monto_pagado);
         const saldo = recibo.saldo !== undefined ? recibo.saldo : (total - pagado);
 
         tr.innerHTML = `
@@ -458,9 +479,24 @@ async function eliminarRecibo(id) {
     }
 
     alert('Recibo eliminado');
-    await cargarRecibos('pendientes');
-    await cargarRecibos('pagados');
+    await cargarRecibos();
+    await cargarRecibos(currentRecibosView);
     actualizarDashboard();
+}
+
+function setRecibosVista(vista) {
+    currentRecibosView = vista;
+    cargarRecibos(vista);
+    actualizarBotonesRecibos();
+}
+
+function actualizarBotonesRecibos() {
+    const btnPendientes = document.getElementById('btnRecibosPendientes');
+    const btnPagados = document.getElementById('btnRecibosPagados');
+    if (!btnPendientes || !btnPagados) return;
+
+    btnPendientes.classList.toggle('btn-filter-active', currentRecibosView === 'pendientes');
+    btnPagados.classList.toggle('btn-filter-active', currentRecibosView === 'pagados');
 }
 
 // ========================================
@@ -498,5 +534,5 @@ window.addEventListener('DOMContentLoaded', function() {
         mesInput.value = new Date().toISOString().slice(0, 7);
     }
     cargarDashboard();
-    cargarRecibos('pendientes');
+    setRecibosVista('pendientes');
 });

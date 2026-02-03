@@ -1104,6 +1104,16 @@ body {
     background: #d1d5db;
 }
 
+.btn-filter-active {
+    outline: 2px solid #1f2937;
+    outline-offset: 2px;
+}
+
+.total-row td {
+    font-weight: 700;
+    background: #f8fafc;
+}
+
 /* Form Card */
 .form-card {
     background: var(--white);
