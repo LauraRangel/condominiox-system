@@ -1,106 +1,9 @@
-// Datos de ejemplo (se pueden agregar más durante la sesión)
-const propietariosDemo = [
-    {
-        id: 1,
-        nombre: 'Juan Carlos',
-        apellido: 'Pérez García',
-        dni: '12345678',
-        correo: 'juan.perez@email.com',
-        telefono: '987654321',
-        nro_departamento: '101',
-        torre: 'A'
-    },
-    {
-        id: 2,
-        nombre: 'María Elena',
-        apellido: 'López Rodríguez',
-        dni: '87654321',
-        correo: 'maria.lopez@email.com',
-        telefono: '912345678',
-        nro_departamento: '202',
-        torre: 'B'
-    },
-    {
-        id: 3,
-        nombre: 'Carlos Alberto',
-        apellido: 'Ramírez Torres',
-        dni: '45678912',
-        correo: 'carlos.ramirez@email.com',
-        telefono: '956789123',
-        nro_departamento: '303',
-        torre: 'A'
-    }
-];
+let propietarios = [];
+let gastos = [];
+let recibos = [];
 
-const propietariosList = new window.Estructuras.ListaPropietarios();
-propietariosDemo.forEach(prop => propietariosList.insertar(prop));
-
-const gastosDemo = [
-    {
-        id: 1,
-        proveedor: 'Mantenimiento General',
-        concepto: 'Limpieza de áreas comunes',
-        monto: 500.00,
-        tipo: 'mantenimiento',
-        fecha_registro: '2025-01-15'
-    },
-    {
-        id: 2,
-        proveedor: 'Luz del Sur',
-        concepto: 'Gasto de luz común - Enero 2025',
-        monto: 350.00,
-        tipo: 'luz',
-        fecha_registro: '2025-01-10'
-    }
-];
-
-const gastosList = new window.Estructuras.ListaGastos();
-gastosDemo.forEach(gasto => gastosList.agregar(gasto));
-
-const recibosDemo = [
-    {
-        id_recibo: 1,
-        propietario_id: 1,
-        propietario: { nombre: 'Juan Carlos', apellido: 'Pérez García' },
-        nro_departamento: '101',
-        torre: 'A',
-        monto_administracion: 50.00,
-        monto_agua: 30.00,
-        monto_luz: 85.00,
-        monto_mantenimiento: 127.50,
-        fecha_emision: '2025-01-01',
-        fecha_pago: null,
-        pagado: false
-    },
-    {
-        id_recibo: 2,
-        propietario_id: 2,
-        propietario: { nombre: 'María Elena', apellido: 'López Rodríguez' },
-        nro_departamento: '202',
-        torre: 'B',
-        monto_administracion: 50.00,
-        monto_agua: 30.00,
-        monto_luz: 85.00,
-        monto_mantenimiento: 127.50,
-        fecha_emision: '2025-01-01',
-        fecha_pago: '2025-01-05',
-        pagado: true
-    }
-];
-
-const recibos = recibosDemo.slice();
-const matrizRecibos = new window.Estructuras.MatrizRecibos();
-recibos.forEach(recibo => {
-    const mes = recibo.fecha_emision.slice(0, 7);
-    matrizRecibos.setRecibo(mes, recibo.propietario_id, recibo);
-});
-
-// Obtener siguiente ID
-function obtenerSiguienteId(lista, campo = 'id') {
-    const items = Array.isArray(lista)
-        ? lista
-        : (lista && typeof lista.toArray === 'function' ? lista.toArray() : []);
-    if (items.length === 0) return 1;
+function obtenerSiguienteId(items, campo = 'id') {
+    if (!items || items.length === 0) return 1;
     return Math.max(...items.map(item => item[campo])) + 1;
 }
 
@@ -108,34 +11,41 @@ function obtenerSiguienteId(lista, campo = 'id') {
 // DASHBOARD
 // ========================================
 
-function cargarDashboard() {
-    document.getElementById('totalPropietarios').textContent = propietariosList.length;
+function actualizarDashboard() {
+    document.getElementById('totalPropietarios').textContent = propietarios.length;
 
     const recibosPendientes = recibos.filter(r => !r.pagado);
     document.getElementById('recibosPendientes').textContent = recibosPendientes.length;
 
-    const totalGastos = gastosList.totalizar();
+    const totalGastos = gastos.reduce((sum, g) => sum + parseFloat(g.monto), 0);
     document.getElementById('gastosDelMes').textContent = formatCurrency(totalGastos);
 
     const recibosPagados = recibos.filter(r => r.pagado);
     document.getElementById('recibosPagados').textContent = recibosPagados.length;
+}
 
-    const mesActual = new Date().toISOString().slice(0, 7);
-    const totalRecibosMes = matrizRecibos.totalPorMes(mesActual);
-    const recibosPagadosElement = document.getElementById('recibosPagados');
-    if (recibosPagadosElement) {
-        recibosPagadosElement.title = `Total emitido ${mesActual}: ${formatCurrency(totalRecibosMes)}`;
-    }
+async function cargarDashboard() {
+    await Promise.all([cargarPropietarios(), cargarGastos(), cargarRecibos()]);
+    actualizarDashboard();
 }
 
 // ========================================
 // GESTIÓN DE PROPIETARIOS
 // ========================================
 
+async function cargarPropietarios() {
+    const { response, data } = await apiFetch('/propietarios');
+    if (!response.ok) {
+        console.error(data);
+        return;
+    }
+    propietarios = data.items || [];
+    listarPropietarios();
+}
+
 function listarPropietarios() {
     const tbody = document.getElementById('tablaPropietarios');
 
-    const propietarios = propietariosList.toArray();
     if (propietarios.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No hay propietarios registrados</td></tr>';
         return;
@@ -159,13 +69,21 @@ function listarPropietarios() {
     });
 }
 
-// Manejar formulario de agregar propietario
 if (document.getElementById('formPropietario')) {
-    document.getElementById('formPropietario').addEventListener('submit', function(e) {
+    const dniInput = document.getElementById('propDNI');
+    const passwordInput = document.getElementById('propContrasena');
+    if (dniInput && passwordInput) {
+        dniInput.addEventListener('input', function() {
+            passwordInput.value = dniInput.value.trim();
+        });
+        passwordInput.setAttribute('readonly', 'readonly');
+    }
+
+    document.getElementById('formPropietario').addEventListener('submit', async function(e) {
         e.preventDefault();
 
         const nuevoPropietario = {
-            id: obtenerSiguienteId(propietariosList),
+            usuario: document.getElementById('propUsuario').value.trim(),
             nombre: document.getElementById('propNombre').value.trim(),
             apellido: document.getElementById('propApellido').value.trim(),
             dni: document.getElementById('propDNI').value.trim(),
@@ -175,26 +93,25 @@ if (document.getElementById('formPropietario')) {
             torre: document.getElementById('propTorre').value
         };
 
-        // Validar DNI (8 dígitos)
         if (!/^\d{8}$/.test(nuevoPropietario.dni)) {
             mostrarMensaje('mensajePropietario', 'El DNI debe tener 8 dígitos numéricos', 'error');
             return;
         }
 
-        // Validar DNI único
-        const propietarios = propietariosList.toArray();
-        if (propietarios.some(p => p.dni === nuevoPropietario.dni)) {
-            mostrarMensaje('mensajePropietario', 'Ya existe un propietario con ese DNI', 'error');
+        const { response, data } = await apiFetch('/propietarios', {
+            method: 'POST',
+            body: JSON.stringify(nuevoPropietario)
+        });
+
+        if (!response.ok) {
+            mostrarMensaje('mensajePropietario', data.error || 'Error al registrar', 'error');
             return;
         }
 
-        // Agregar nuevo propietario
-        propietariosList.insertar(nuevoPropietario);
-
         mostrarMensaje('mensajePropietario', 'Propietario registrado exitosamente', 'success');
         document.getElementById('formPropietario').reset();
-        listarPropietarios();
-        cargarDashboard();
+        await cargarPropietarios();
+        actualizarDashboard();
 
         setTimeout(() => {
             cerrarFormulario('agregarPropietario');
@@ -202,33 +119,44 @@ if (document.getElementById('formPropietario')) {
     });
 }
 
-// Eliminar propietario
-function eliminarPropietario(id) {
+async function eliminarPropietario(id) {
     if (!confirm('¿Está seguro de eliminar este propietario?')) {
         return;
     }
 
-    const eliminado = propietariosList.eliminarPorId(id);
-    if (eliminado) {
-        alert('Propietario eliminado exitosamente');
-        listarPropietarios();
-        cargarDashboard();
-    } else {
-        alert('No se encontró el propietario');
+    const { response, data } = await apiFetch(`/propietarios/${id}`, {
+        method: 'DELETE'
+    });
+
+    if (!response.ok) {
+        alert(data.error || 'No se pudo eliminar');
+        return;
     }
+
+    alert('Propietario eliminado exitosamente');
+    await cargarPropietarios();
+    actualizarDashboard();
 }
 
 // ========================================
 // GESTIÓN DE GASTOS
 // ========================================
 
-// Manejar formulario de gasto de mantenimiento
+async function cargarGastos() {
+    const { response, data } = await apiFetch('/gastos');
+    if (!response.ok) {
+        console.error(data);
+        return;
+    }
+    gastos = data.items || [];
+    listarGastos();
+}
+
 if (document.getElementById('formGasto')) {
-    document.getElementById('formGasto').addEventListener('submit', function(e) {
+    document.getElementById('formGasto').addEventListener('submit', async function(e) {
         e.preventDefault();
 
         const nuevoGasto = {
-            id: obtenerSiguienteId(gastosList),
             proveedor: document.getElementById('gastoProveedor').value.trim(),
             concepto: document.getElementById('gastoConcepto').value.trim(),
             monto: parseFloat(document.getElementById('gastoMonto').value),
@@ -236,12 +164,20 @@ if (document.getElementById('formGasto')) {
             fecha_registro: document.getElementById('gastoFecha').value
         };
 
-        gastosList.agregar(nuevoGasto);
+        const { response, data } = await apiFetch('/gastos', {
+            method: 'POST',
+            body: JSON.stringify(nuevoGasto)
+        });
+
+        if (!response.ok) {
+            mostrarMensaje('mensajeGasto', data.error || 'Error al registrar', 'error');
+            return;
+        }
 
         mostrarMensaje('mensajeGasto', 'Gasto registrado exitosamente', 'success');
         document.getElementById('formGasto').reset();
-        listarGastos();
-        cargarDashboard();
+        await cargarGastos();
+        actualizarDashboard();
 
         setTimeout(() => {
             cerrarFormulario('agregarGasto');
@@ -249,15 +185,13 @@ if (document.getElementById('formGasto')) {
     });
 }
 
-// Manejar formulario de gasto de luz
 if (document.getElementById('formGastoLuz')) {
-    document.getElementById('formGastoLuz').addEventListener('submit', function(e) {
+    document.getElementById('formGastoLuz').addEventListener('submit', async function(e) {
         e.preventDefault();
 
         const mes = document.getElementById('gastoLuzMes').value;
 
         const nuevoGasto = {
-            id: obtenerSiguienteId(gastosList),
             proveedor: 'Luz del Sur',
             concepto: `Gasto de luz común - ${mes}`,
             monto: parseFloat(document.getElementById('gastoLuzMonto').value),
@@ -265,12 +199,20 @@ if (document.getElementById('formGastoLuz')) {
             fecha_registro: document.getElementById('gastoLuzFecha').value
         };
 
-        gastosList.agregar(nuevoGasto);
+        const { response, data } = await apiFetch('/gastos', {
+            method: 'POST',
+            body: JSON.stringify(nuevoGasto)
+        });
+
+        if (!response.ok) {
+            mostrarMensaje('mensajeGastoLuz', data.error || 'Error al registrar', 'error');
+            return;
+        }
 
         mostrarMensaje('mensajeGastoLuz', 'Gasto de luz registrado', 'success');
         document.getElementById('formGastoLuz').reset();
-        listarGastos();
-        cargarDashboard();
+        await cargarGastos();
+        actualizarDashboard();
 
         setTimeout(() => {
             cerrarFormulario('agregarGastoLuz');
@@ -278,10 +220,8 @@ if (document.getElementById('formGastoLuz')) {
     });
 }
 
-// Listar gastos
 function listarGastos() {
     const tbody = document.getElementById('tablaGastos');
-    const gastos = gastosList.toArray();
 
     if (gastos.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No hay gastos registrados</td></tr>';
@@ -307,79 +247,45 @@ function listarGastos() {
 // GESTIÓN DE RECIBOS
 // ========================================
 
-function generarRecibos() {
-    const propietarios = propietariosList.toArray();
-    if (propietarios.length === 0) {
-        alert('No hay propietarios registrados para generar recibos');
-        return;
-    }
-
+async function generarRecibos() {
     if (!confirm('¿Generar recibos del mes actual para todos los propietarios?')) {
         return;
     }
 
-    const fechaActual = new Date();
-    const mesActual = fechaActual.toISOString().slice(0, 7);
-
-    // Calcular montos
-    const totalGastos = gastosList.totalizar();
-    const gastoPorPropietario = totalGastos / propietarios.length;
-
-    const montoAdministracion = 50.00;
-    const montoAgua = 30.00;
-    const montoLuz = gastoPorPropietario * 0.4;
-    const montoMantenimiento = gastoPorPropietario * 0.6;
-
-    let recibosGenerados = 0;
-
-    propietarios.forEach(prop => {
-        // Verificar si ya tiene recibo este mes
-        const yaExiste = recibos.some(r =>
-            r.propietario_id === prop.id &&
-            r.fecha_emision.startsWith(mesActual)
-        );
-
-        if (!yaExiste) {
-            const nuevoRecibo = {
-                id_recibo: obtenerSiguienteId(recibos, 'id_recibo'),
-                propietario_id: prop.id,
-                propietario: {
-                    nombre: prop.nombre,
-                    apellido: prop.apellido
-                },
-                nro_departamento: prop.nro_departamento,
-                torre: prop.torre,
-                monto_administracion: montoAdministracion,
-                monto_agua: montoAgua,
-                monto_luz: parseFloat(montoLuz.toFixed(2)),
-                monto_mantenimiento: parseFloat(montoMantenimiento.toFixed(2)),
-                fecha_emision: fechaActual.toISOString().slice(0, 10),
-                fecha_pago: null,
-                pagado: false
-            };
-
-            recibos.push(nuevoRecibo);
-            matrizRecibos.setRecibo(mesActual, prop.id, nuevoRecibo);
-            recibosGenerados++;
-        }
+    const { response, data } = await apiFetch('/recibos/generar', {
+        method: 'POST',
+        body: JSON.stringify({})
     });
 
-    if (recibosGenerados > 0) {
-        alert(`Se generaron ${recibosGenerados} recibos exitosamente`);
-    } else {
-        alert('Los recibos de este mes ya fueron generados');
+    if (!response.ok) {
+        alert(data.error || 'No se pudieron generar los recibos');
+        return;
     }
 
-    listarRecibos('pendientes');
-    cargarDashboard();
+    alert(`Se generaron ${data.generados} recibos exitosamente`);
+    await cargarRecibos('pendientes');
+    await cargarRecibos('pagados');
+    actualizarDashboard();
 }
 
-function listarRecibos(tipo = 'pendientes') {
-    const tbody = document.getElementById('tablaRecibos');
+async function cargarRecibos(estado = '') {
+    const query = estado ? `?estado=${estado}` : '';
+    const { response, data } = await apiFetch(`/recibos${query}`);
+    if (!response.ok) {
+        console.error(data);
+        return;
+    }
+    if (!estado) {
+        recibos = data.items || [];
+    }
+    if (estado) {
+        listarRecibos(estado, data.items || []);
+    }
+}
 
-    const filtrados = tipo === 'pendientes'
-        ? recibos.filter(r => !r.pagado)
-        : recibos.filter(r => r.pagado);
+function listarRecibos(tipo = 'pendientes', items = []) {
+    const tbody = document.getElementById('tablaRecibos');
+    const filtrados = items;
 
     if (filtrados.length === 0) {
         tbody.innerHTML = `<tr><td colspan="7" class="empty-state">No hay recibos ${tipo}</td></tr>`;
@@ -395,7 +301,7 @@ function listarRecibos(tipo = 'pendientes') {
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${recibo.id_recibo}</td>
+            <td>${recibo.id}</td>
             <td>${recibo.propietario.nombre} ${recibo.propietario.apellido}</td>
             <td>${recibo.nro_departamento} - ${recibo.torre}</td>
             <td>${formatCurrency(total)}</td>
@@ -434,6 +340,5 @@ if (document.getElementById('formCambiarContrasena')) {
 
 window.addEventListener('DOMContentLoaded', function() {
     cargarDashboard();
-    listarPropietarios();
-    listarGastos();
+    cargarRecibos('pendientes');
 });

@@ -1,6 +1,35 @@
+// URL base del backend
+const API_URL = 'https://condominiox-system.onrender.com/api';
+
 // Configuración de almacenamiento local
 const AUTH_TOKEN_KEY = 'auth_token';
 const USER_DATA_KEY = 'user_data';
+
+async function apiFetch(path, options = {}) {
+    const url = `${API_URL}${path}`;
+    const headers = new Headers(options.headers || {});
+    const token = getAuthToken();
+    if (token) {
+        headers.set('Authorization', `Bearer ${token}`);
+    }
+    if (!headers.has('Content-Type') && options.body) {
+        headers.set('Content-Type', 'application/json');
+    }
+
+    const response = await fetch(url, {
+        ...options,
+        headers
+    });
+
+    if (response.status === 401) {
+        removeAuthToken();
+        window.location.href = 'index.html';
+        throw new Error('Sesión expirada');
+    }
+
+    const data = await response.json().catch(() => ({}));
+    return { response, data };
+}
 
 // Helper para obtener el token
 function getAuthToken() {

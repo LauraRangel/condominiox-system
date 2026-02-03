@@ -1,12 +1,6 @@
-// Usuarios de demostración
-const USUARIOS_DEMO = {
-    'admin': { id: 1, usuario: 'admin', contrasena: '123456', tipo: 'Administrador' },
-    'propietario': { id: 2, usuario: 'propietario', contrasena: '123456', tipo: 'Propietario' }
-};
-
 // Manejar el formulario de login
 if (document.getElementById('loginForm')) {
-    document.getElementById('loginForm').addEventListener('submit', function(e) {
+    document.getElementById('loginForm').addEventListener('submit', async function(e) {
         e.preventDefault();
 
         const usuario = document.getElementById('usuario').value;
@@ -21,40 +15,54 @@ if (document.getElementById('loginForm')) {
             return;
         }
 
+        if (!window.API_URL) {
+            mensaje.textContent = 'No se encontró la configuración del servidor';
+            mensaje.className = 'mensaje error';
+            return;
+        }
+
         // Limpiar mensaje previo
         mensaje.textContent = 'Iniciando sesión...';
         mensaje.className = 'mensaje';
         mensaje.style.display = 'block';
 
-        // Login demo
-        const userDemo = USUARIOS_DEMO[usuario];
+        try {
+            const response = await fetch(`${API_URL}/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    usuario: usuario,
+                    contrasena: contrasena,
+                    tipo: tipoUsuario
+                })
+            });
 
-        if (userDemo && userDemo.contrasena === contrasena) {
-            if (userDemo.tipo !== tipoUsuario) {
-                mensaje.textContent = `Este usuario es ${userDemo.tipo}, no ${tipoUsuario}`;
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                mensaje.textContent = data.error || 'Usuario o contraseña incorrectos';
                 mensaje.className = 'mensaje error';
                 return;
             }
 
-            setAuthToken('demo_token_' + Date.now());
-            setUserData({
-                id: userDemo.id,
-                usuario: userDemo.usuario,
-                tipo: userDemo.tipo
-            });
+            setAuthToken(data.token);
+            setUserData(data.user);
 
             mensaje.textContent = 'Inicio de sesión exitoso. Redirigiendo...';
             mensaje.className = 'mensaje success';
 
             setTimeout(() => {
-                if (userDemo.tipo === 'Administrador') {
+                if (data.user.tipo === 'Administrador') {
                     window.location.href = 'admin.html';
                 } else {
                     window.location.href = 'propietario.html';
                 }
             }, 1000);
-        } else {
-            mensaje.textContent = 'Usuario o contraseña incorrectos';
+        } catch (error) {
+            console.error('Error:', error);
+            mensaje.textContent = 'Error de conexión. Intente nuevamente.';
             mensaje.className = 'mensaje error';
         }
     });

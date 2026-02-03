@@ -5,8 +5,9 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import jwt
 
-from db import fetch_one
-from security import verify_password
+from db import fetch_one, fetch_all, execute, execute_returning, get_db
+from security import verify_password, hash_password
+from structures import ListaPropietarios, MatrizRecibos
 
 load_dotenv()
 
@@ -32,6 +33,33 @@ def _jwt_exp_seconds():
         return 3600
 
 
+def _get_payload():
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        return None, ("Token requerido", 401)
+    token = auth.split(" ", 1)[1].strip()
+    try:
+        payload = jwt.decode(
+            token,
+            _jwt_secret(),
+            algorithms=["HS256"],
+            issuer=_jwt_issuer(),
+        )
+        return payload, None
+    except jwt.ExpiredSignatureError:
+        return None, ("Token expirado", 401)
+    except jwt.InvalidTokenError:
+        return None, ("Token inválido", 401)
+
+
+def _require_roles(payload, *roles):
+    if not roles:
+        return None
+    if payload.get("tipo") not in roles:
+        return ("No autorizado", 403)
+    return None
+
+
 @app.get("/api/health")
 def health():
     return jsonify({"status": "ok"})
@@ -49,9 +77,12 @@ def login():
 
     user = fetch_one(
         """
-        SELECT id, usuario, password_hash, tipo, activo
-        FROM usuarios
-        WHERE usuario = %s
+        SELECT u.id, u.usuario, u.password_hash, u.tipo, u.activo,
+               p.id AS propietario_id, p.nombre, p.apellido, p.dni,
+               p.correo, p.telefono, p.nro_departamento, p.torre
+        FROM usuarios u
+        LEFT JOIN propietarios p ON p.usuario_id = u.id
+        WHERE u.usuario = %s
         """,
         [usuario],
     )
@@ -74,17 +105,457 @@ def login():
         "iat": int(now.timestamp()),
         "exp": int((now + dt.timedelta(seconds=_jwt_exp_seconds())).timestamp()),
     }
+    if user.get("propietario_id"):
+        payload["propietario_id"] = user["propietario_id"]
     token = jwt.encode(payload, _jwt_secret(), algorithm="HS256")
+
+    user_data = {
+        "id": user["id"],
+        "usuario": user["usuario"],
+        "tipo": user["tipo"],
+    }
+    if user.get("propietario_id"):
+        user_data["propietario_id"] = user["propietario_id"]
+        user_data["perfil"] = {
+            "nombre": user["nombre"],
+            "apellido": user["apellido"],
+            "dni": user["dni"],
+            "correo": user["correo"],
+            "telefono": user["telefono"],
+            "nro_departamento": user["nro_departamento"],
+            "torre": user["torre"],
+        }
+
+    return jsonify({"token": token, "user": user_data})
+
+
+@app.get("/api/mi-perfil")
+def mi_perfil():
+    payload, err = _get_payload()
+    if err:
+        return jsonify({"error": err[0]}), err[1]
+
+    user = fetch_one(
+        """
+        SELECT u.id, u.usuario, u.tipo,
+               p.id AS propietario_id, p.nombre, p.apellido, p.dni,
+               p.correo, p.telefono, p.nro_departamento, p.torre
+        FROM usuarios u
+        LEFT JOIN propietarios p ON p.usuario_id = u.id
+        WHERE u.id = %s
+        """,
+        [payload.get("sub")],
+    )
+    if not user:
+        return jsonify({"error": "Usuario no encontrado"}), 404
 
     return jsonify(
         {
-            "token": token,
-            "user": {
-                "id": user["id"],
-                "usuario": user["usuario"],
-                "tipo": user["tipo"],
+            "id": user["id"],
+            "usuario": user["usuario"],
+            "tipo": user["tipo"],
+            "propietario_id": user.get("propietario_id"),
+            "perfil": {
+                "nombre": user.get("nombre"),
+                "apellido": user.get("apellido"),
+                "dni": user.get("dni"),
+                "correo": user.get("correo"),
+                "telefono": user.get("telefono"),
+                "nro_departamento": user.get("nro_departamento"),
+                "torre": user.get("torre"),
             },
         }
+    )
+
+
+@app.get("/api/propietarios")
+def listar_propietarios():
+    payload, err = _get_payload()
+    if err:
+        return jsonify({"error": err[0]}), err[1]
+    role_err = _require_roles(payload, "Administrador")
+    if role_err:
+        return jsonify({"error": role_err[0]}), role_err[1]
+
+    rows = fetch_all(
+        """
+        SELECT id, usuario_id, nombre, apellido, dni, correo,
+               telefono, nro_departamento, torre
+        FROM propietarios
+        ORDER BY id
+        """
+    )
+    lista = ListaPropietarios()
+    for row in rows:
+        lista.insertar(row)
+    return jsonify({"items": lista.to_list(), "total": lista.length})
+
+
+@app.post("/api/propietarios")
+def crear_propietario():
+    payload, err = _get_payload()
+    if err:
+        return jsonify({"error": err[0]}), err[1]
+    role_err = _require_roles(payload, "Administrador")
+    if role_err:
+        return jsonify({"error": role_err[0]}), role_err[1]
+
+    body = request.get_json(silent=True) or {}
+    required = [
+        "usuario",
+        "nombre",
+        "apellido",
+        "dni",
+        "nro_departamento",
+        "torre",
+    ]
+    if not all(body.get(k) for k in required):
+        return jsonify({"error": "Datos incompletos"}), 400
+
+    if not str(body.get("dni", "")).isdigit() or len(str(body.get("dni"))) != 8:
+        return jsonify({"error": "El DNI debe tener 8 dígitos"}), 400
+
+    existe_usuario = fetch_one("SELECT id FROM usuarios WHERE usuario = %s", [body["usuario"]])
+    if existe_usuario:
+        return jsonify({"error": "Ya existe un usuario con ese nombre"}), 409
+
+    existe = fetch_one("SELECT id FROM propietarios WHERE dni = %s", [body["dni"]])
+    if existe:
+        return jsonify({"error": "Ya existe un propietario con ese DNI"}), 409
+
+    password_hash = hash_password(body["dni"].strip())
+
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO usuarios (usuario, password_hash, tipo, activo)
+                    VALUES (%s, %s, 'Propietario', TRUE)
+                    RETURNING id
+                    """,
+                    [body["usuario"].strip(), password_hash],
+                )
+                usuario_row = cur.fetchone()
+                cur.execute(
+                    """
+                    INSERT INTO propietarios (usuario_id, nombre, apellido, dni, correo, telefono, nro_departamento, torre)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING id, usuario_id, nombre, apellido, dni, correo, telefono, nro_departamento, torre
+                    """,
+                    [
+                        usuario_row["id"],
+                        body["nombre"].strip(),
+                        body["apellido"].strip(),
+                        body["dni"].strip(),
+                        body.get("correo"),
+                        body.get("telefono"),
+                        body["nro_departamento"].strip(),
+                        body["torre"].strip(),
+                    ],
+                )
+                row = cur.fetchone()
+            conn.commit()
+    except Exception:
+        return jsonify({"error": "No se pudo crear el propietario"}), 500
+
+    return jsonify(row), 201
+
+
+@app.delete("/api/propietarios/<int:propietario_id>")
+def eliminar_propietario(propietario_id):
+    payload, err = _get_payload()
+    if err:
+        return jsonify({"error": err[0]}), err[1]
+    role_err = _require_roles(payload, "Administrador")
+    if role_err:
+        return jsonify({"error": role_err[0]}), role_err[1]
+
+    row = execute_returning(
+        "DELETE FROM propietarios WHERE id = %s RETURNING id",
+        [propietario_id],
+    )
+    if not row:
+        return jsonify({"error": "Propietario no encontrado"}), 404
+    return jsonify({"deleted": propietario_id})
+
+
+@app.get("/api/gastos")
+def listar_gastos():
+    payload, err = _get_payload()
+    if err:
+        return jsonify({"error": err[0]}), err[1]
+    role_err = _require_roles(payload, "Administrador")
+    if role_err:
+        return jsonify({"error": role_err[0]}), role_err[1]
+
+    rows = fetch_all(
+        """
+        SELECT id, proveedor, concepto, monto, tipo, fecha_registro
+        FROM gastos
+        ORDER BY fecha_registro DESC, id DESC
+        """
+    )
+    return jsonify({"items": rows})
+
+
+@app.post("/api/gastos")
+def crear_gasto():
+    payload, err = _get_payload()
+    if err:
+        return jsonify({"error": err[0]}), err[1]
+    role_err = _require_roles(payload, "Administrador")
+    if role_err:
+        return jsonify({"error": role_err[0]}), role_err[1]
+
+    body = request.get_json(silent=True) or {}
+    required = ["proveedor", "concepto", "monto", "tipo", "fecha_registro"]
+    if not all(body.get(k) for k in required):
+        return jsonify({"error": "Datos incompletos"}), 400
+
+    if body.get("tipo") not in ("mantenimiento", "luz"):
+        return jsonify({"error": "Tipo de gasto inválido"}), 400
+
+    row = execute_returning(
+        """
+        INSERT INTO gastos (proveedor, concepto, monto, tipo, fecha_registro)
+        VALUES (%s, %s, %s, %s, %s)
+        RETURNING id, proveedor, concepto, monto, tipo, fecha_registro
+        """,
+        [
+            body["proveedor"].strip(),
+            body["concepto"].strip(),
+            body["monto"],
+            body["tipo"],
+            body["fecha_registro"],
+        ],
+    )
+    return jsonify(row), 201
+
+
+def _recibo_total(recibo):
+    return (
+        recibo["monto_administracion"]
+        + recibo["monto_agua"]
+        + recibo["monto_luz"]
+        + recibo["monto_mantenimiento"]
+    )
+
+
+@app.post("/api/recibos/generar")
+def generar_recibos():
+    payload, err = _get_payload()
+    if err:
+        return jsonify({"error": err[0]}), err[1]
+    role_err = _require_roles(payload, "Administrador")
+    if role_err:
+        return jsonify({"error": role_err[0]}), role_err[1]
+
+    body = request.get_json(silent=True) or {}
+    mes = body.get("mes") or dt.datetime.utcnow().strftime("%Y-%m")
+    fecha_emision = body.get("fecha_emision") or dt.date.today().isoformat()
+
+    propietarios = fetch_all(
+        """
+        SELECT id, nombre, apellido, nro_departamento, torre
+        FROM propietarios
+        ORDER BY id
+        """
+    )
+    if not propietarios:
+        return jsonify({"error": "No hay propietarios registrados"}), 400
+
+    gasto_total = fetch_one(
+        "SELECT COALESCE(SUM(monto), 0) AS total FROM gastos",
+    )
+    gasto_por_prop = (gasto_total["total"] or 0) / len(propietarios)
+    monto_administracion = 50.0
+    monto_agua = 30.0
+    monto_luz = round(gasto_por_prop * 0.4, 2)
+    monto_mantenimiento = round(gasto_por_prop * 0.6, 2)
+
+    generados = 0
+    recibos = []
+    for prop in propietarios:
+        existe = fetch_one(
+            """
+            SELECT id FROM recibos
+            WHERE propietario_id = %s
+              AND TO_CHAR(fecha_emision, 'YYYY-MM') = %s
+            """,
+            [prop["id"], mes],
+        )
+        if existe:
+            continue
+
+        recibo = execute_returning(
+            """
+            INSERT INTO recibos (
+                propietario_id, monto_administracion, monto_agua,
+                monto_luz, monto_mantenimiento, fecha_emision, fecha_pago, pagado
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, NULL, FALSE)
+            RETURNING id, propietario_id, monto_administracion, monto_agua,
+                      monto_luz, monto_mantenimiento, fecha_emision, fecha_pago, pagado
+            """,
+            [
+                prop["id"],
+                monto_administracion,
+                monto_agua,
+                monto_luz,
+                monto_mantenimiento,
+                fecha_emision,
+            ],
+        )
+        recibo["propietario"] = {
+            "nombre": prop["nombre"],
+            "apellido": prop["apellido"],
+        }
+        recibo["nro_departamento"] = prop["nro_departamento"]
+        recibo["torre"] = prop["torre"]
+        recibo["total"] = _recibo_total(recibo)
+        recibos.append(recibo)
+        generados += 1
+
+    return jsonify({"generados": generados, "items": recibos})
+
+
+@app.get("/api/recibos")
+def listar_recibos_admin():
+    payload, err = _get_payload()
+    if err:
+        return jsonify({"error": err[0]}), err[1]
+    role_err = _require_roles(payload, "Administrador")
+    if role_err:
+        return jsonify({"error": role_err[0]}), role_err[1]
+
+    estado = (request.args.get("estado") or "").strip().lower()
+    filtros = []
+    params = []
+    if estado == "pendientes":
+        filtros.append("r.pagado = FALSE")
+    elif estado == "pagados":
+        filtros.append("r.pagado = TRUE")
+
+    where = f"WHERE {' AND '.join(filtros)}" if filtros else ""
+    rows = fetch_all(
+        f"""
+        SELECT r.id, r.propietario_id, r.monto_administracion, r.monto_agua,
+               r.monto_luz, r.monto_mantenimiento, r.fecha_emision, r.fecha_pago, r.pagado,
+               p.nombre, p.apellido, p.nro_departamento, p.torre
+        FROM recibos r
+        JOIN propietarios p ON p.id = r.propietario_id
+        {where}
+        ORDER BY r.fecha_emision DESC, r.id DESC
+        """,
+        params,
+    )
+
+    matriz = MatrizRecibos()
+    items = []
+    for row in rows:
+        recibo = {
+            "id": row["id"],
+            "propietario_id": row["propietario_id"],
+            "propietario": {"nombre": row["nombre"], "apellido": row["apellido"]},
+            "nro_departamento": row["nro_departamento"],
+            "torre": row["torre"],
+            "monto_administracion": row["monto_administracion"],
+            "monto_agua": row["monto_agua"],
+            "monto_luz": row["monto_luz"],
+            "monto_mantenimiento": row["monto_mantenimiento"],
+            "fecha_emision": row["fecha_emision"].isoformat(),
+            "fecha_pago": row["fecha_pago"].isoformat() if row["fecha_pago"] else None,
+            "pagado": row["pagado"],
+        }
+        mes = recibo["fecha_emision"][:7]
+        matriz.set_recibo(mes, recibo["propietario_id"], recibo)
+        recibo["total"] = _recibo_total(recibo)
+        items.append(recibo)
+
+    return jsonify({"items": items})
+
+
+@app.get("/api/recibos/propietario/<int:propietario_id>")
+def listar_recibos_propietario(propietario_id):
+    payload, err = _get_payload()
+    if err:
+        return jsonify({"error": err[0]}), err[1]
+
+    if payload.get("tipo") == "Propietario":
+        if str(propietario_id) != str(payload.get("propietario_id")):
+            return jsonify({"error": "No autorizado"}), 403
+
+    estado = (request.args.get("estado") or "").strip().lower()
+    filtros = ["r.propietario_id = %s"]
+    params = [propietario_id]
+    if estado == "pendientes":
+        filtros.append("r.pagado = FALSE")
+    elif estado == "pagados":
+        filtros.append("r.pagado = TRUE")
+
+    rows = fetch_all(
+        f"""
+        SELECT r.id, r.propietario_id, r.monto_administracion, r.monto_agua,
+               r.monto_luz, r.monto_mantenimiento, r.fecha_emision, r.fecha_pago, r.pagado
+        FROM recibos r
+        WHERE {' AND '.join(filtros)}
+        ORDER BY r.fecha_emision DESC, r.id DESC
+        """,
+        params,
+    )
+
+    matriz = MatrizRecibos()
+    items = []
+    for row in rows:
+        recibo = {
+            "id": row["id"],
+            "propietario_id": row["propietario_id"],
+            "monto_administracion": row["monto_administracion"],
+            "monto_agua": row["monto_agua"],
+            "monto_luz": row["monto_luz"],
+            "monto_mantenimiento": row["monto_mantenimiento"],
+            "fecha_emision": row["fecha_emision"].isoformat(),
+            "fecha_pago": row["fecha_pago"].isoformat() if row["fecha_pago"] else None,
+            "pagado": row["pagado"],
+        }
+        mes = recibo["fecha_emision"][:7]
+        matriz.set_recibo(mes, propietario_id, recibo)
+        recibo["total"] = _recibo_total(recibo)
+        items.append(recibo)
+
+    return jsonify({"items": items})
+
+
+@app.post("/api/recibos/<int:recibo_id>/pagar")
+def pagar_recibo(recibo_id):
+    payload, err = _get_payload()
+    if err:
+        return jsonify({"error": err[0]}), err[1]
+
+    if payload.get("tipo") == "Propietario":
+        recibo = fetch_one(
+            "SELECT propietario_id FROM recibos WHERE id = %s",
+            [recibo_id],
+        )
+        if not recibo:
+            return jsonify({"error": "Recibo no encontrado"}), 404
+        if str(recibo["propietario_id"]) != str(payload.get("propietario_id")):
+            return jsonify({"error": "No autorizado"}), 403
+
+    row = execute_returning(
+        """
+        UPDATE recibos
+        SET pagado = TRUE, fecha_pago = CURRENT_DATE
+        WHERE id = %s
+        RETURNING id, pagado, fecha_pago
+        """,
+        [recibo_id],
+    )
+    if not row:
+        return jsonify({"error": "Recibo no encontrado"}), 404
+    return jsonify(
+        {"id": row["id"], "pagado": row["pagado"], "fecha_pago": row["fecha_pago"].isoformat()}
     )
 
 

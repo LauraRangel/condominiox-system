@@ -17,6 +17,22 @@ def fetch_one(query, params=None):
             return cur.fetchone()
 
 
+def fetch_all(query, params=None):
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(query, params or [])
+            return cur.fetchall()
+
+
+def execute_returning(query, params=None):
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(query, params or [])
+            row = cur.fetchone()
+        conn.commit()
+    return row
+
+
 def execute(query, params=None):
     with get_db() as conn:
         with conn.cursor() as cur:
