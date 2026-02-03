@@ -1,5 +1,6 @@
 // URL base del backend
 const API_URL = 'https://condominiox-system.onrender.com/api';
+window.API_URL = API_URL;
 
 // Configuración de almacenamiento local
 const AUTH_TOKEN_KEY = 'auth_token';
