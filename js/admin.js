@@ -317,13 +317,18 @@ function listarGastos() {
 // ========================================
 
 async function generarRecibos() {
-    if (!confirm('¿Generar recibos del mes actual para todos los propietarios?')) {
+    if (!confirm('¿Generar recibos para todos los propietarios?')) {
         return;
     }
 
+    const fechaInput = document.getElementById('fechaRecibos');
+    const fechaEmision = fechaInput && fechaInput.value
+        ? fechaInput.value
+        : new Date().toISOString().slice(0, 10);
+
     const { response, data } = await apiFetch('/recibos/generar', {
         method: 'POST',
-        body: JSON.stringify({})
+        body: JSON.stringify({ fecha_emision: fechaEmision })
     });
 
     if (!response.ok) {
@@ -332,6 +337,32 @@ async function generarRecibos() {
     }
 
     alert(`Se generaron ${data.generados} recibos exitosamente`);
+    await cargarRecibos('pendientes');
+    await cargarRecibos('pagados');
+    actualizarDashboard();
+}
+
+async function recalcularRecibos() {
+    const mesInput = document.getElementById('mesRecibos');
+    const mes = mesInput && mesInput.value
+        ? mesInput.value
+        : new Date().toISOString().slice(0, 7);
+
+    if (!confirm(`¿Recalcular recibos del mes ${mes}?`)) {
+        return;
+    }
+
+    const { response, data } = await apiFetch('/recibos/recalcular', {
+        method: 'POST',
+        body: JSON.stringify({ mes })
+    });
+
+    if (!response.ok) {
+        alert(data.error || 'No se pudo recalcular');
+        return;
+    }
+
+    alert(`Se recalcularon ${data.actualizados} recibos`);
     await cargarRecibos('pendientes');
     await cargarRecibos('pagados');
     actualizarDashboard();
@@ -357,7 +388,7 @@ function listarRecibos(tipo = 'pendientes', items = []) {
     const filtrados = items;
 
     if (filtrados.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="empty-state">No hay recibos ${tipo}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="empty-state">No hay recibos ${tipo}</td></tr>`;
         return;
     }
 
@@ -369,11 +400,16 @@ function listarRecibos(tipo = 'pendientes', items = []) {
             : '<span style="color: orange;">⏳ Pendiente</span>';
 
         const tr = document.createElement('tr');
+        const pagado = recibo.monto_pagado || 0;
+        const saldo = recibo.saldo !== undefined ? recibo.saldo : (total - pagado);
+
         tr.innerHTML = `
             <td>${recibo.id}</td>
             <td>${recibo.propietario.nombre} ${recibo.propietario.apellido}</td>
             <td>${recibo.nro_departamento} - ${recibo.torre}</td>
             <td>${formatCurrency(total)}</td>
+            <td>${formatCurrency(pagado)}</td>
+            <td>${formatCurrency(saldo)}</td>
             <td>${estado}</td>
             <td>${formatDate(recibo.fecha_emision)}</td>
             <td>${formatDate(recibo.fecha_pago)}</td>
@@ -408,6 +444,14 @@ if (document.getElementById('formCambiarContrasena')) {
 // ========================================
 
 window.addEventListener('DOMContentLoaded', function() {
+    const fechaInput = document.getElementById('fechaRecibos');
+    if (fechaInput && !fechaInput.value) {
+        fechaInput.value = new Date().toISOString().slice(0, 10);
+    }
+    const mesInput = document.getElementById('mesRecibos');
+    if (mesInput && !mesInput.value) {
+        mesInput.value = new Date().toISOString().slice(0, 7);
+    }
     cargarDashboard();
     cargarRecibos('pendientes');
 });

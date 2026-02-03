@@ -216,6 +216,7 @@ def actualizar_configuracion():
 
 @app.get("/api/propietarios")
 def listar_propietarios():
+    # Usa ListaPropietarios (lista enlazada) para el recorrido y salida ordenada.
     payload, err = _get_payload()
     if err:
         return jsonify({"error": err[0]}), err[1]
@@ -396,6 +397,10 @@ def _recibo_total(recibo):
     )
 
 
+def _recibo_saldo(recibo):
+    return _recibo_total(recibo) - (recibo.get("monto_pagado") or 0)
+
+
 @app.post("/api/recibos/generar")
 def generar_recibos():
     payload, err = _get_payload()
@@ -406,8 +411,8 @@ def generar_recibos():
         return jsonify({"error": role_err[0]}), role_err[1]
 
     body = request.get_json(silent=True) or {}
-    mes = body.get("mes") or dt.datetime.utcnow().strftime("%Y-%m")
     fecha_emision = body.get("fecha_emision") or dt.date.today().isoformat()
+    mes = body.get("mes") or str(fecha_emision)[:7]
 
     propietarios = fetch_all(
         """
@@ -462,11 +467,11 @@ def generar_recibos():
             """
             INSERT INTO recibos (
                 propietario_id, monto_administracion, monto_agua,
-                monto_luz, monto_mantenimiento, fecha_emision, fecha_pago, pagado
+                monto_luz, monto_mantenimiento, monto_pagado, fecha_emision, fecha_pago, pagado
             )
-            VALUES (%s, %s, %s, %s, %s, %s, NULL, FALSE)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, NULL, FALSE)
             RETURNING id, propietario_id, monto_administracion, monto_agua,
-                      monto_luz, monto_mantenimiento, fecha_emision, fecha_pago, pagado
+                      monto_luz, monto_mantenimiento, monto_pagado, fecha_emision, fecha_pago, pagado
             """,
             [
                 prop["id"],
@@ -474,6 +479,7 @@ def generar_recibos():
                 monto_agua,
                 float(monto_luz),
                 float(monto_mantenimiento),
+                0,
                 fecha_emision,
             ],
         )
@@ -484,14 +490,122 @@ def generar_recibos():
         recibo["nro_departamento"] = prop["nro_departamento"]
         recibo["torre"] = prop["torre"]
         recibo["total"] = _recibo_total(recibo)
+        recibo["saldo"] = _recibo_saldo(recibo)
         recibos.append(recibo)
         generados += 1
 
     return jsonify({"generados": generados, "items": recibos})
 
 
+@app.post("/api/recibos/recalcular")
+def recalcular_recibos():
+    payload, err = _get_payload()
+    if err:
+        return jsonify({"error": err[0]}), err[1]
+    role_err = _require_roles(payload, "Administrador")
+    if role_err:
+        return jsonify({"error": role_err[0]}), role_err[1]
+
+    body = request.get_json(silent=True) or {}
+    mes = body.get("mes")
+    if not mes:
+        return jsonify({"error": "Mes requerido (YYYY-MM)"}), 400
+
+    propietarios = fetch_all(
+        """
+        SELECT id FROM propietarios
+        ORDER BY id
+        """
+    )
+    if not propietarios:
+        return jsonify({"error": "No hay propietarios registrados"}), 400
+
+    def _sum_por_tipo(tipo):
+        row = fetch_one(
+            """
+            SELECT COALESCE(SUM(monto), 0) AS total
+            FROM gastos
+            WHERE tipo = %s
+              AND TO_CHAR(fecha_registro, 'YYYY-MM') = %s
+            """,
+            [tipo, mes],
+        )
+        total_tipo = row["total"] or 0
+        if not isinstance(total_tipo, Decimal):
+            total_tipo = Decimal(str(total_tipo))
+        return total_tipo
+
+    total_agua = _sum_por_tipo("agua")
+    total_luz = _sum_por_tipo("luz")
+    total_mantenimiento = _sum_por_tipo("mantenimiento")
+
+    divisor = Decimal(len(propietarios))
+    monto_administracion = Decimal(str(_get_monto_administracion()))
+    monto_agua = (total_agua / divisor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    monto_luz = (total_luz / divisor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    monto_mantenimiento = (total_mantenimiento / divisor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+    rows = fetch_all(
+        """
+        UPDATE recibos
+        SET monto_administracion = %s,
+            monto_agua = %s,
+            monto_luz = %s,
+            monto_mantenimiento = %s,
+            pagado = CASE
+                WHEN monto_pagado >= (%s + %s + %s + %s) THEN TRUE
+                ELSE FALSE
+            END,
+            fecha_pago = CASE
+                WHEN monto_pagado >= (%s + %s + %s + %s)
+                    THEN COALESCE(fecha_pago, CURRENT_DATE)
+                ELSE NULL
+            END
+        WHERE TO_CHAR(fecha_emision, 'YYYY-MM') = %s
+        RETURNING id, propietario_id, monto_administracion, monto_agua, monto_luz,
+                  monto_mantenimiento, monto_pagado, fecha_emision, fecha_pago, pagado
+        """,
+        [
+            float(monto_administracion),
+            float(monto_agua),
+            float(monto_luz),
+            float(monto_mantenimiento),
+            float(monto_administracion),
+            float(monto_agua),
+            float(monto_luz),
+            float(monto_mantenimiento),
+            float(monto_administracion),
+            float(monto_agua),
+            float(monto_luz),
+            float(monto_mantenimiento),
+            mes,
+        ],
+    )
+
+    items = []
+    for row in rows:
+        recibo = {
+            "id": row["id"],
+            "propietario_id": row["propietario_id"],
+            "monto_administracion": row["monto_administracion"],
+            "monto_agua": row["monto_agua"],
+            "monto_luz": row["monto_luz"],
+            "monto_mantenimiento": row["monto_mantenimiento"],
+            "monto_pagado": row["monto_pagado"],
+            "fecha_emision": row["fecha_emision"].isoformat(),
+            "fecha_pago": row["fecha_pago"].isoformat() if row["fecha_pago"] else None,
+            "pagado": row["pagado"],
+        }
+        recibo["total"] = _recibo_total(recibo)
+        recibo["saldo"] = _recibo_saldo(recibo)
+        items.append(recibo)
+
+    return jsonify({"actualizados": len(items), "items": items})
+
+
 @app.get("/api/recibos")
 def listar_recibos_admin():
+    # Usa MatrizRecibos para organizar recibos por mes/propietario.
     payload, err = _get_payload()
     if err:
         return jsonify({"error": err[0]}), err[1]
@@ -511,7 +625,8 @@ def listar_recibos_admin():
     rows = fetch_all(
         f"""
         SELECT r.id, r.propietario_id, r.monto_administracion, r.monto_agua,
-               r.monto_luz, r.monto_mantenimiento, r.fecha_emision, r.fecha_pago, r.pagado,
+               r.monto_luz, r.monto_mantenimiento, r.monto_pagado,
+               r.fecha_emision, r.fecha_pago, r.pagado,
                p.nombre, p.apellido, p.nro_departamento, p.torre
         FROM recibos r
         JOIN propietarios p ON p.id = r.propietario_id
@@ -534,6 +649,7 @@ def listar_recibos_admin():
             "monto_agua": row["monto_agua"],
             "monto_luz": row["monto_luz"],
             "monto_mantenimiento": row["monto_mantenimiento"],
+            "monto_pagado": row.get("monto_pagado", 0),
             "fecha_emision": row["fecha_emision"].isoformat(),
             "fecha_pago": row["fecha_pago"].isoformat() if row["fecha_pago"] else None,
             "pagado": row["pagado"],
@@ -541,6 +657,7 @@ def listar_recibos_admin():
         mes = recibo["fecha_emision"][:7]
         matriz.set_recibo(mes, recibo["propietario_id"], recibo)
         recibo["total"] = _recibo_total(recibo)
+        recibo["saldo"] = _recibo_saldo(recibo)
         items.append(recibo)
 
     return jsonify({"items": items})
@@ -548,6 +665,7 @@ def listar_recibos_admin():
 
 @app.get("/api/recibos/propietario/<int:propietario_id>")
 def listar_recibos_propietario(propietario_id):
+    # Usa MatrizRecibos para organizar recibos por mes/propietario.
     payload, err = _get_payload()
     if err:
         return jsonify({"error": err[0]}), err[1]
@@ -567,7 +685,8 @@ def listar_recibos_propietario(propietario_id):
     rows = fetch_all(
         f"""
         SELECT r.id, r.propietario_id, r.monto_administracion, r.monto_agua,
-               r.monto_luz, r.monto_mantenimiento, r.fecha_emision, r.fecha_pago, r.pagado
+               r.monto_luz, r.monto_mantenimiento, r.monto_pagado,
+               r.fecha_emision, r.fecha_pago, r.pagado
         FROM recibos r
         WHERE {' AND '.join(filtros)}
         ORDER BY r.fecha_emision DESC, r.id DESC
@@ -585,6 +704,7 @@ def listar_recibos_propietario(propietario_id):
             "monto_agua": row["monto_agua"],
             "monto_luz": row["monto_luz"],
             "monto_mantenimiento": row["monto_mantenimiento"],
+            "monto_pagado": row["monto_pagado"],
             "fecha_emision": row["fecha_emision"].isoformat(),
             "fecha_pago": row["fecha_pago"].isoformat() if row["fecha_pago"] else None,
             "pagado": row["pagado"],
@@ -592,6 +712,7 @@ def listar_recibos_propietario(propietario_id):
         mes = recibo["fecha_emision"][:7]
         matriz.set_recibo(mes, propietario_id, recibo)
         recibo["total"] = _recibo_total(recibo)
+        recibo["saldo"] = _recibo_saldo(recibo)
         items.append(recibo)
 
     return jsonify({"items": items})
@@ -613,20 +734,46 @@ def pagar_recibo(recibo_id):
         if str(recibo["propietario_id"]) != str(payload.get("propietario_id")):
             return jsonify({"error": "No autorizado"}), 403
 
+    body = request.get_json(silent=True) or {}
+    monto = body.get("monto")
+    if monto is None:
+        return jsonify({"error": "Monto requerido"}), 400
+
     row = execute_returning(
         """
         UPDATE recibos
-        SET pagado = TRUE, fecha_pago = CURRENT_DATE
+        SET monto_pagado = monto_pagado + %s,
+            pagado = CASE
+                WHEN (monto_pagado + %s) >= (monto_administracion + monto_agua + monto_luz + monto_mantenimiento)
+                    THEN TRUE
+                ELSE FALSE
+            END,
+            fecha_pago = CASE
+                WHEN (monto_pagado + %s) >= (monto_administracion + monto_agua + monto_luz + monto_mantenimiento)
+                    THEN CURRENT_DATE
+                ELSE NULL
+            END
         WHERE id = %s
-        RETURNING id, pagado, fecha_pago
+        RETURNING id, monto_pagado, pagado, fecha_pago,
+                  monto_administracion, monto_agua, monto_luz, monto_mantenimiento
         """,
-        [recibo_id],
+        [monto, monto, monto, recibo_id],
     )
     if not row:
         return jsonify({"error": "Recibo no encontrado"}), 404
-    return jsonify(
-        {"id": row["id"], "pagado": row["pagado"], "fecha_pago": row["fecha_pago"].isoformat()}
-    )
+    recibo = {
+        "id": row["id"],
+        "monto_pagado": row["monto_pagado"],
+        "monto_administracion": row["monto_administracion"],
+        "monto_agua": row["monto_agua"],
+        "monto_luz": row["monto_luz"],
+        "monto_mantenimiento": row["monto_mantenimiento"],
+        "pagado": row["pagado"],
+        "fecha_pago": row["fecha_pago"].isoformat() if row["fecha_pago"] else None,
+    }
+    recibo["total"] = _recibo_total(recibo)
+    recibo["saldo"] = _recibo_saldo(recibo)
+    return jsonify(recibo)
 
 
 if __name__ == "__main__":

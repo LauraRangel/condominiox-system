@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS recibos (
     monto_agua NUMERIC(10,2) NOT NULL,
     monto_luz NUMERIC(10,2) NOT NULL,
     monto_mantenimiento NUMERIC(10,2) NOT NULL,
+    monto_pagado NUMERIC(10,2) NOT NULL DEFAULT 0,
     fecha_emision DATE NOT NULL,
     fecha_pago DATE,
     pagado BOOLEAN DEFAULT FALSE

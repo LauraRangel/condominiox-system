@@ -93,12 +93,19 @@ async function cargarRecibosPendientes() {
 }
 
 async function pagarRecibo(idRecibo) {
-    if (!confirm('¿Confirmar pago de este recibo?')) {
+    const montoStr = prompt('Ingrese el monto a pagar');
+    if (!montoStr) {
+        return;
+    }
+    const monto = parseFloat(montoStr);
+    if (Number.isNaN(monto) || monto <= 0) {
+        alert('Monto inválido');
         return;
     }
 
     const { response, data } = await apiFetch(`/recibos/${idRecibo}/pagar`, {
-        method: 'POST'
+        method: 'POST',
+        body: JSON.stringify({ monto })
     });
 
     if (!response.ok) {

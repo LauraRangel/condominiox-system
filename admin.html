@@ -340,8 +340,13 @@
                 </div>
 
                 <div class="action-buttons">
+                    <input type="date" id="fechaRecibos" class="input-inline" title="Fecha de generación">
                     <button class="btn btn-primary" onclick="generarRecibos()">
-                        📄 Generar Recibos del Mes
+                        📄 Generar Recibos
+                    </button>
+                    <input type="month" id="mesRecibos" class="input-inline" title="Mes a recalcular">
+                    <button class="btn btn-secondary" onclick="recalcularRecibos()">
+                        🔁 Recalcular Mes
                     </button>
                     <button class="btn btn-secondary" onclick="cargarRecibos('pendientes')">
                         Pendientes
@@ -359,6 +364,8 @@
                                 <th>Propietario</th>
                                 <th>Depto.</th>
                                 <th>Total</th>
+                                <th>Pagado</th>
+                                <th>Saldo</th>
                                 <th>Estado</th>
                                 <th>Emisión</th>
                                 <th>Pago</th>
@@ -366,7 +373,7 @@
                         </thead>
                         <tbody id="tablaRecibos">
                             <tr>
-                                <td colspan="7" class="empty-state">Seleccione una opción</td>
+                                <td colspan="9" class="empty-state">Seleccione una opción</td>
                             </tr>
                         </tbody>
                     </table>
