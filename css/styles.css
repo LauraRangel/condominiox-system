@@ -75,6 +75,7 @@ body {
     object-fit: contain;
     margin-bottom: 15px;
     filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.3));
+    animation: floatLogo 4s ease-in-out infinite;
 }
 
 .sidebar-header h1 {
@@ -789,6 +790,22 @@ body {
     }
 }
 
+@keyframes floatLogo {
+    0% { transform: translateY(0); opacity: 0.85; }
+    50% { transform: translateY(-6px); opacity: 1; }
+    100% { transform: translateY(0); opacity: 0.85; }
+}
+
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(6px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
 @media (max-width: 576px) {
     .content-header h2 {
         font-size: 1.6rem;
@@ -1013,6 +1030,7 @@ body {
     align-items: center;
     gap: 20px;
     box-shadow: var(--shadow);
+    animation: fadeUp 0.6s ease-out both;
 }
 
 .stat-icon {
@@ -1247,6 +1265,7 @@ body {
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow);
     overflow: hidden;
+    animation: slideIn 0.5s ease-out both;
 }
 
 .data-table {
