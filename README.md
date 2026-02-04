@@ -6,7 +6,7 @@
 
 ---
 
-Sistema web para la gestión de condominios desarrollado con HTML, CSS y JavaScript.
+Sistema web para la gestión de condominios con frontend en HTML/CSS/JS y backend en Flask + PostgreSQL.
 
 ## Estructura del Proyecto
 
@@ -23,6 +23,13 @@ sistema-condominio/
 │   ├── auth.js             # Autenticación y navegación
 │   ├── admin.js            # Funciones panel admin
 │   └── propietario.js      # Funciones panel propietario
+├── backend/
+│   ├── app.py              # API Flask
+│   ├── db.py               # Conexión a PostgreSQL
+│   ├── security.py         # Hashing y verificación de contraseña
+│   ├── structures.py       # Estructuras de datos (listas/matriz)
+│   ├── requirements.txt    # Dependencias backend
+│   └── schema.sql          # Esquema de base de datos
 ├── img/
 │   └── logo.png            # Logo del sistema
 └── README.md
@@ -52,16 +59,9 @@ El sistema cuenta con:
 
 ## Inicio Rápido
 
-### Credenciales de prueba
-
-| Rol | Usuario | Contraseña |
-|-----|---------|------------|
-| Administrador | `admin` | `123456` |
-| Propietario | `propietario` | `123456` |
-
 ### Abrir el Sistema
 
-**Opción A: Directamente**
+**Opción A: Frontend directo**
 - Abre `index.html` en tu navegador
 
 **Opción B: Con servidor local (Python)**
@@ -74,6 +74,21 @@ Luego abre: `http://localhost:8080`
 **Opción C: Con VS Code**
 - Instala la extensión "Live Server"
 - Clic derecho en `index.html` → "Open with Live Server"
+
+### Backend local (opcional)
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+export DATABASE_URL="postgres://usuario:password@host:puerto/db"
+export JWT_SECRET="una_clave_segura"
+python app.py
+```
+
+### Backend en Render
+- Configura `DATABASE_URL` y `JWT_SECRET` en el servicio.
+- Start Command: `gunicorn app:app` (si el root es `backend/`).
 
 ### Flujo de Login
 
@@ -88,9 +103,9 @@ Luego abre: `http://localhost:8080`
 | Sección | Funcionalidades |
 |---------|-----------------|
 | **Dashboard** | Estadísticas generales (propietarios, recibos, gastos) |
-| **Propietarios** | Agregar, listar y eliminar propietarios |
-| **Gastos** | Registrar gastos de mantenimiento y luz |
-| **Recibos** | Generar recibos mensuales, ver pendientes y pagados |
+| **Propietarios** | Agregar, listar y eliminar propietarios (crea usuario con contraseña = DNI) |
+| **Gastos** | Registrar gastos de mantenimiento, luz y agua (con fecha manual) |
+| **Recibos** | Generar, recalcular por mes, ver pendientes/pagados y eliminar |
 | **Mi Perfil** | Cambiar contraseña |
 
 ### Panel Propietario
@@ -98,25 +113,21 @@ Luego abre: `http://localhost:8080`
 | Sección | Funcionalidades |
 |---------|-----------------|
 | **Mi Información** | Ver datos personales y resumen de cuenta |
-| **Recibos Pendientes** | Ver recibos pendientes |
-| **Recibos Pagados** | Historial de pagos realizados |
+| **Recibos Pendientes** | Ver recibos pendientes con saldo |
+| **Recibos Pagados** | Historial de pagos realizados con monto pagado |
 | **Mi Perfil** | Cambiar contraseña |
 
-## Datos de Ejemplo
-
-El sistema incluye datos de ejemplo precargados:
-
-- **3 Propietarios** registrados
-- **2 Gastos** (mantenimiento y luz)
-- **2 Recibos** (1 pendiente, 1 pagado)
-
-Los datos se pueden modificar durante la sesión. Al recargar la página, se restauran los datos de ejemplo.
+## Datos
+- Los datos reales se guardan en PostgreSQL.
+- El login utiliza usuarios reales registrados en la base de datos.
 
 ## Tecnologías
 
 - **HTML5** - Estructura
 - **CSS3** - Estilos con variables CSS, Flexbox, Grid
 - **JavaScript ES6+** - Lógica de la aplicación
+- **Flask** - API backend
+- **PostgreSQL** - Base de datos
 
 ## Responsive Design
 
@@ -128,5 +139,5 @@ Los datos se pueden modificar durante la sesión. Al recargar la página, se res
 
 ---
 
-**Versión:** 1.0
-**Fecha:** Enero 2026
+**Versión:** 2.0
+**Fecha:** Febrero 2026

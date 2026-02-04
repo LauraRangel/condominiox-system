@@ -1,5 +1,30 @@
 # Documentación Técnica - Sistema CondominioX
 
+## 0. Arquitectura General (Resumen)
+
+- **Frontend:** HTML, CSS, JavaScript (panel admin y propietario).
+- **Backend:** Flask + PostgreSQL (API REST).
+- **Hosting:** Frontend en GitHub Pages, backend en Render.
+
+### Variables de entorno (backend)
+- `DATABASE_URL`: cadena de conexión a PostgreSQL.
+- `JWT_SECRET`: clave para firmar tokens JWT.
+- Opcional: `JWT_ISSUER`, `JWT_EXPIRES_SECONDS`.
+
+### Endpoints principales (API)
+- `POST /api/login`
+- `GET /api/propietarios` | `POST /api/propietarios` | `DELETE /api/propietarios/:id`
+- `GET /api/gastos` | `POST /api/gastos` | `DELETE /api/gastos/:id`
+- `POST /api/recibos/generar`
+- `POST /api/recibos/recalcular`
+- `GET /api/recibos?estado=pendientes|pagados&mes=YYYY-MM`
+- `GET /api/recibos/propietario/:id`
+- `POST /api/recibos/:id/pagar` (pagos parciales)
+- `DELETE /api/recibos/:id`
+- `GET /api/configuracion` | `PUT /api/configuracion`
+
+---
+
 ## 1. HTML: Estructura Básica y Elementos
 
 ### 1.1 Estructura del Documento HTML
@@ -110,6 +135,40 @@ Las variables permiten reutilizar valores en todo el CSS:
     --transition: all 0.3s ease;   /* Transición suave */
 }
 ```
+
+---
+
+## 3. Base de Datos (PostgreSQL)
+
+### Tablas principales
+- `usuarios`: credenciales y roles (Administrador/Propietario).
+- `propietarios`: datos personales y vínculo `usuario_id`.
+- `gastos`: mantenimiento, luz y agua (con fecha manual).
+- `recibos`: montos por tipo, `monto_pagado`, estado y fechas.
+- `configuracion`: monto de administración configurable.
+
+### Campos relevantes
+- `recibos.monto_pagado`: permite pagos parciales.
+- `recibos.pagado`: se actualiza cuando `monto_pagado >= total`.
+- `configuracion.monto_administracion`: valor editable desde el panel admin.
+
+---
+
+## 4. Estructuras de Datos (Backend)
+
+### Lista enlazada de propietarios (`ListaPropietarios`)
+- Implementación en `backend/structures.py`.
+- Se usa en `GET /api/propietarios` para recorrer e insertar propietarios.
+- Operaciones: insertar, eliminar por id, recorrer, to_list.
+
+### Matriz de recibos por mes (`MatrizRecibos`)
+- Implementación en `backend/structures.py`.
+- Representación: `meses[YYYY-MM][propietario_id] = recibo`.
+- Se usa en:
+  - `GET /api/recibos` (admin) para organizar y resumir por mes.
+  - `GET /api/recibos/propietario/:id` para listar por propietario.
+- Operaciones: set_recibo, get_recibo, total_por_mes, listar_por_propietario.
+
 
 **Uso de variables:**
 ```css
