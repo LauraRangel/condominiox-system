@@ -131,11 +131,13 @@ python app.py
 
 ## Responsive Design
 
-| Dispositivo | Breakpoint | Características |
-|-------------|------------|-----------------|
-| Desktop | > 992px | Sidebar visible, layout completo |
-| Tablet | 576px - 992px | Sidebar oculto, contenido adaptado |
-| Móvil | < 576px | Layout vertical |
+**Breakpoints en `css/styles.css`:**
+- `@media (max-width: 992px)`
+- `@media (max-width: 576px)`
+
+**Cambios principales por breakpoint:**
+- **<= 992px:** sidebar horizontal, grids a 2 columnas, formularios a 1 columna.
+- **<= 576px:** tablas con tipografía compacta, botones en columna, grids a 1 columna.
 
 ---
 
