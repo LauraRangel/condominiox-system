@@ -1114,6 +1114,41 @@ body {
     background: #f8fafc;
 }
 
+.recibos-search {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: #f8fafc;
+    border: 1px dashed #cbd5f5;
+    padding: 12px 14px;
+    border-radius: var(--radius);
+    margin-bottom: 12px;
+}
+
+.recibos-search-title {
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.recibos-search-hint {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.input-inline {
+    padding: 10px 12px;
+    border: 2px solid var(--light-gray);
+    border-radius: var(--radius);
+    background: var(--white);
+    font-size: 0.95rem;
+    max-width: 220px;
+}
+
+.input-inline:focus {
+    outline: none;
+    border-color: var(--accent-gold);
+}
+
 /* Form Card */
 .form-card {
     background: var(--white);

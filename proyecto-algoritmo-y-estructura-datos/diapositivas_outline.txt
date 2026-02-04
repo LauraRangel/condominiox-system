@@ -1,0 +1,19 @@
+CondominioX: Uso de estructuras de datos
+	Curso: Algoritmos y Estructuras de Datos
+	Autora: Laura Rangel
+Contexto del proyecto
+	Sistema web para gestión de condominios
+	Módulos: propietarios, gastos, recibos
+	Backend en Flask + PostgreSQL
+Lista enlazada de propietarios
+	Nodo: data + next
+	Operaciones: insertar, eliminar, recorrer
+	Uso real: GET /api/propietarios (backend)
+Matriz de recibos por mes
+	meses[mes][propietario_id] = recibo
+	Agrupación y resumen por mes
+	Uso real: GET /api/recibos y filtros por mes
+Impacto en el sistema
+	Acceso rápido por clave (O(1) promedio)
+	Resumen mensual: emitido, pagado, pendiente
+	Visualización en panel admin + lista detallada

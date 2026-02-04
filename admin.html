@@ -364,8 +364,13 @@
                     </div>
                 </div>
 
+                <div class="recibos-search">
+                    <div class="recibos-search-title">Buscar recibos</div>
+                    <div class="recibos-search-hint">Selecciona un mes para filtrar. Si dejas vacío, verás todos.</div>
+                    <input type="month" id="filtroMesRecibos" class="input-inline" placeholder="Mes (YYYY-MM)" title="Filtrar por mes">
+                </div>
+
                 <div class="action-buttons">
-                    <input type="month" id="filtroMesRecibos" class="input-inline" title="Filtrar por mes">
                     <input type="date" id="fechaRecibos" class="input-inline" title="Fecha de generación">
                     <button class="btn btn-primary" onclick="generarRecibos()">
                         📄 Generar Recibos
@@ -440,7 +445,6 @@
 
     <script src="js/config.js?v=20260203"></script>
     <script src="js/auth.js?v=20260203"></script>
-    <script src="js/estructuras.js?v=20260203"></script>
     <script src="js/admin.js?v=20260203"></script>
     <script>
         // Override mostrarSeccion para el nuevo diseño
