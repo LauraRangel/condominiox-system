@@ -158,141 +158,6 @@ Las variables permiten reutilizar valores en todo el CSS:
 
 ---
 
-## 3. Base de Datos (PostgreSQL)
-
-### Tablas principales
-- `usuarios`: credenciales y roles (Administrador/Propietario).
-- `propietarios`: datos personales y vínculo `usuario_id`.
-- `gastos`: mantenimiento, luz y agua (con fecha manual).
-- `recibos`: montos por tipo, `monto_pagado`, estado y fechas.
-- `configuracion`: monto de administración configurable.
-
-### Campos relevantes
-- `recibos.monto_pagado`: permite pagos parciales.
-- `recibos.pagado`: se actualiza cuando `monto_pagado >= total`.
-- `configuracion.monto_administracion`: valor editable desde el panel admin.
-
----
-
-## 4. Estructuras de Datos (Backend)
-
-### Lista enlazada de propietarios (`ListaPropietarios`)
-- Implementación en `backend/structures.py`.
-- Se usa en `GET /api/propietarios` para recorrer e insertar propietarios.
-- Operaciones: insertar, eliminar por id, recorrer, to_list.
-
-### Matriz de recibos por mes (`MatrizRecibos`)
-- Implementación en `backend/structures.py`.
-- Representación: `meses[YYYY-MM][propietario_id] = recibo`.
-- Se usa en:
-  - `GET /api/recibos` (admin) para organizar y resumir por mes.
-  - `GET /api/recibos/propietario/:id` para listar por propietario.
-- Operaciones: set_recibo, get_recibo, total_por_mes, listar_por_propietario.
-
-
-**Uso de variables:**
-```css
-.sidebar {
-    background: var(--primary-dark);  /* Usa la variable */
-}
-```
-
-### 2.2 Tipos de Selectores
-
-| Tipo | Ejemplo | Descripción |
-|------|---------|-------------|
-| **Universal** | `*` | Selecciona todos los elementos |
-| **Elemento** | `body`, `h1`, `table` | Selecciona por etiqueta |
-| **Clase** | `.sidebar`, `.btn-primary` | Selecciona por clase (.) |
-| **ID** | `#loginForm`, `#userName` | Selecciona por ID (#) |
-| **Descendiente** | `.sidebar-nav .nav-item` | Elemento dentro de otro |
-| **Pseudo-clase** | `.btn:hover`, `input:focus` | Estado del elemento |
-| **Atributo** | `[data-tab="inicio"]` | Por atributo |
-
-### 2.3 Reset CSS
-
-Elimina estilos predeterminados del navegador:
-
-```css
-* {
-    margin: 0;           /* Sin márgenes */
-    padding: 0;          /* Sin relleno */
-    box-sizing: border-box;  /* El padding se incluye en el ancho */
-}
-```
-
-### 2.4 Propiedades CSS Principales
-
-#### Layout con Flexbox:
-```css
-.app-container {
-    display: flex;           /* Activa Flexbox */
-    min-height: 100vh;       /* Mínimo altura de pantalla */
-}
-
-.sidebar {
-    display: flex;
-    flex-direction: column;  /* Elementos en columna */
-    gap: 8px;               /* Espacio entre elementos */
-}
-
-.nav-item {
-    display: flex;
-    align-items: center;     /* Centra verticalmente */
-    justify-content: center; /* Centra horizontalmente */
-}
-```
-
-#### Layout con Grid:
-```css
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 20px;
-}
-
-.form-row {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);  /* 2 columnas iguales */
-    gap: 20px;
-}
-```
-
-#### Estilos de Caja:
-```css
-.stat-card {
-    background: var(--white);
-    border-radius: var(--radius);    /* Bordes redondeados */
-    padding: 25px;                    /* Relleno interno */
-    box-shadow: var(--shadow);        /* Sombra */
-}
-```
-
-#### Gradientes:
-```css
-.sidebar {
-    background: linear-gradient(180deg, var(--primary-dark) 0%, var(--primary) 100%);
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, var(--accent-gold), var(--accent-gold-dark));
-}
-```
-
-#### Transiciones:
-```css
-.nav-item {
-    transition: var(--transition);  /* all 0.3s ease */
-}
-
-.nav-item:hover {
-    background: rgba(255, 255, 255, 0.1);
-    transform: translateY(-2px);
-}
-```
-
----
-
 ## 3. Estructura del Layout
 
 ### 3.1 Encabezado con Menú (Sidebar)
@@ -1072,6 +937,37 @@ if (elemento.classList.contains('active')) { ... }
 
 ---
 
+## 15. Base de Datos (PostgreSQL)
+
+### Tablas principales
+- `usuarios`: credenciales y roles (Administrador/Propietario).
+- `propietarios`: datos personales y vínculo `usuario_id`.
+- `gastos`: mantenimiento, luz y agua (con fecha manual).
+- `recibos`: montos por tipo, `monto_pagado`, estado y fechas.
+- `configuracion`: monto de administración configurable.
+
+### Campos relevantes
+- `recibos.monto_pagado`: permite pagos parciales.
+- `recibos.pagado`: se actualiza cuando `monto_pagado >= total`.
+- `configuracion.monto_administracion`: valor editable desde el panel admin.
+
+---
+
+## 16. Estructuras de Datos (Backend)
+
+### Lista enlazada de propietarios (`ListaPropietarios`)
+- Implementación en `backend/structures.py`.
+- Se usa en `GET /api/propietarios` para recorrer e insertar propietarios.
+- Operaciones: insertar, eliminar por id, recorrer, to_list.
+
+### Matriz de recibos por mes (`MatrizRecibos`)
+- Implementación en `backend/structures.py`.
+- Representación: `meses[YYYY-MM][propietario_id] = recibo`.
+- Se usa en:
+  - `GET /api/recibos` (admin) para organizar y resumir por mes.
+  - `GET /api/recibos/propietario/:id` para listar por propietario.
+- Operaciones: set_recibo, get_recibo, total_por_mes, listar_por_propietario.
+
 ## Resumen de Archivos
 
 | Archivo | Descripción |
@@ -1086,3 +982,4 @@ if (elemento.classList.contains('active')) { ... }
 | `js/admin.js` | Lógica del panel administrador |
 | `js/propietario.js` | Lógica del panel propietario |
 | `img/logo.png` | Logo del sistema |
+---
