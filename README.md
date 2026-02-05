@@ -1,145 +1,70 @@
-# CondominioX - Sistema de Gestión de Condominio
+# CondominioX - Guía de Uso
 
-**Universidad Tecnológica del Perú**
-
+**Universidad Tecnológica del Perú**  
 **Estudiante:** Laura Isabel Rangel Teran
 
----
+Sistema web para la gestión de condominios. Esta guía es **de uso práctico** para administradores y propietarios.
 
-Sistema web para la gestión de condominios con frontend en HTML/CSS/JS y backend en Flask + PostgreSQL.
+## Acceso rápido
 
-## Estructura del Proyecto
+1. Abre `index.html` en tu navegador.
+2. Elige el rol (Administrador o Propietario).
+3. Ingresa usuario y contraseña.
 
-```
-sistema-condominio/
-├── index.html              # Página de login
-├── admin.html              # Panel administrador
-├── propietario.html        # Panel propietario
-├── recuperar.html          # Recuperar contraseña
-├── css/
-│   └── styles.css          # Estilos globales
-├── js/
-│   ├── config.js           # Configuración y helpers
-│   ├── auth.js             # Autenticación y navegación
-│   ├── admin.js            # Funciones panel admin
-│   └── propietario.js      # Funciones panel propietario
-├── backend/
-│   ├── app.py              # API Flask
-│   ├── db.py               # Conexión a PostgreSQL
-│   ├── security.py         # Hashing y verificación de contraseña
-│   ├── structures.py       # Estructuras de datos (listas/matriz)
-│   ├── requirements.txt    # Dependencias backend
-│   └── schema.sql          # Esquema de base de datos
-├── img/
-│   └── logo.png            # Logo del sistema
-└── README.md
-```
+## Flujo de uso (Administrador)
 
-## Diseño
+### 1) Crear propietarios
+- Ir a **Propietarios** → **Agregar Propietario**.
+- Se crea automáticamente un usuario con **contraseña = DNI**.
+- Puedes **eliminar** propietarios desde la tabla.
 
-El sistema cuenta con:
+### 2) Registrar gastos
+- Ir a **Gastos**.
+- Registrar **mantenimiento**, **luz** y **agua** con **fecha manual**.
+- Puedes **eliminar** gastos desde la tabla.
 
-- **Sidebar lateral** con navegación y logo
-- **Sistema de pestañas** (Inicio, Información, Acerca de)
-- **Login en dos pasos**: selección de rol + credenciales
-- **Paneles de administración** con estadísticas en cards
-- **Tablas de datos** estilizadas
-- **Formularios** para agregar registros
-- **Diseño responsive**
+### 3) Configurar monto de administración
+- Ir al **Dashboard** → **Configuración de Administración**.
+- Guardar el nuevo monto.
 
-### Paleta de Colores
+### 4) Generar recibos
+- En **Recibos** elige la **fecha de generación**.
+- Presiona **Generar Recibos**.
 
-```css
---primary-dark: #1e3a3a     /* Verde oscuro */
---primary: #2d4a4a          /* Verde principal */
---accent-gold: #c9a227      /* Dorado */
---white: #ffffff            /* Blanco */
---off-white: #f8f9fa        /* Gris claro */
-```
+### 5) Recalcular por mes
+- En **Recibos**, selecciona el **mes** y presiona **Recalcular Mes**.
+- Esto actualiza montos y mantiene pagos parciales.
 
-## Inicio Rápido
+### 6) Ver y filtrar recibos
+- Usa los botones **Pendientes/Pagados**.
+- Usa el **filtro por mes** para ver solo un periodo.
+- El resumen mensual muestra **emitido, pagado y saldo**.
 
-### Abrir el Sistema
+## Flujo de uso (Propietario)
 
-**Opción A: Frontend directo**
-- Abre `index.html` en tu navegador
+### 1) Ver estado de cuenta
+- **Mi Información** muestra resumen personal.
+- **Pendientes** muestra saldo por recibo.
 
-**Opción B: Con servidor local (Python)**
-```bash
-cd sistema-condominio
-python -m http.server 8080
-```
-Luego abre: `http://localhost:8080`
+### 2) Pagar recibos
+- En **Pendientes**, presiona **Pagar**.
+- Ingresa el monto a pagar (pagos parciales habilitados).
 
-**Opción C: Con VS Code**
-- Instala la extensión "Live Server"
-- Clic derecho en `index.html` → "Open with Live Server"
+### 3) Historial de pagos
+- En **Pagados** puedes revisar los montos y fechas.
 
-### Backend local (opcional)
-```bash
-cd backend
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-export DATABASE_URL="postgres://usuario:password@host:puerto/db"
-export JWT_SECRET="una_clave_segura"
-python app.py
-```
+## Notas importantes
 
-### Backend en Render
-- Configura `DATABASE_URL` y `JWT_SECRET` en el servicio.
-- Start Command: `gunicorn app:app` (si el root es `backend/`).
+- **Contraseña inicial del propietario = DNI**.
+- Los pagos pueden ser **parciales** y el saldo se actualiza.
+- La fecha de generación define el mes de cálculo.
 
-### Flujo de Login
+## Solución rápida a errores comunes
 
-1. Selecciona el tipo de usuario (Administrador o Propietario)
-2. Ingresa usuario y contraseña
-3. Serás redirigido al panel correspondiente
-
-## Funcionalidades
-
-### Panel Administrador
-
-| Sección | Funcionalidades |
-|---------|-----------------|
-| **Dashboard** | Estadísticas generales (propietarios, recibos, gastos) |
-| **Propietarios** | Agregar, listar y eliminar propietarios (crea usuario con contraseña = DNI) |
-| **Gastos** | Registrar gastos de mantenimiento, luz y agua (con fecha manual) |
-| **Recibos** | Generar, recalcular por mes, ver pendientes/pagados y eliminar |
-| **Mi Perfil** | Cambiar contraseña |
-
-### Panel Propietario
-
-| Sección | Funcionalidades |
-|---------|-----------------|
-| **Mi Información** | Ver datos personales y resumen de cuenta |
-| **Recibos Pendientes** | Ver recibos pendientes con saldo |
-| **Recibos Pagados** | Historial de pagos realizados con monto pagado |
-| **Mi Perfil** | Cambiar contraseña |
-
-## Datos
-- Los datos reales se guardan en PostgreSQL.
-- El login utiliza usuarios reales registrados en la base de datos.
-
-## Tecnologías
-
-- **HTML5** - Estructura
-- **CSS3** - Estilos con variables CSS, Flexbox, Grid
-- **JavaScript ES6+** - Lógica de la aplicación
-- **Flask** - API backend
-- **PostgreSQL** - Base de datos
-
-## Responsive Design
-
-**Breakpoints en `css/styles.css`:**
-- `@media (max-width: 992px)`
-- `@media (max-width: 576px)`
-
-**Cambios principales por breakpoint:**
-- **<= 992px:** sidebar horizontal, grids a 2 columnas, formularios a 1 columna.
-- **<= 576px:** tablas con tipografía compacta, botones en columna, grids a 1 columna.
+- Si no ves cambios en la web, recarga con `Ctrl + Shift + R`.
+- Si el login no funciona, verifica usuario, rol y contraseña.
 
 ---
 
-**Versión:** 2.0
+**Versión:** 2.0  
 **Fecha:** Febrero 2026
