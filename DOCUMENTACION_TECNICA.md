@@ -27,6 +27,16 @@
 
 ## 1. HTML: Estructura Básica y Elementos
 
+### Checklist de Requisitos (Dónde se ve en el proyecto)
+
+- **Estructura básica HTML + meta tags:** `index.html`, `admin.html`, `propietario.html`, `recuperar.html` (etiquetas `<html>`, `<head>`, `<meta charset>`, `<meta viewport>`).
+- **Etiquetas de texto:** `index.html` y `admin.html` (`<h1>`, `<h2>`, `<p>`, `<span>`, `<small>`).
+- **Enlaces:** `index.html` (link a `recuperar.html`).
+- **Encabezado/menú/cuerpo:** `admin.html` y `propietario.html` (`<aside class="sidebar">`, `<main class="panel-content">`).
+- **Formularios:** `index.html` (login), `admin.html` (propietarios/gastos/config), `propietario.html` (cambiar contraseña).
+- **Tablas:** `admin.html` (propietarios/gastos/recibos/resumen), `propietario.html` (recibos).
+- **Multimedia (imágenes):** `img/logo.png` usado en `index.html`, `admin.html`, `propietario.html`.
+
 ### 1.1 Estructura del Documento HTML
 
 ```html
@@ -135,6 +145,16 @@ Las variables permiten reutilizar valores en todo el CSS:
     --transition: all 0.3s ease;   /* Transición suave */
 }
 ```
+
+### Checklist de CSS
+
+- **Selectores y valores:** `css/styles.css` (clases, IDs, pseudo-clases).
+- **Tipografía / colores / íconos:** `css/styles.css` + `img/logo.png`.
+- **Transiciones:** botones y navegación (`.btn:hover`, `.nav-item:hover`).
+- **Animaciones (keyframes):** `css/styles.css` (`@keyframes floatLogo`, `fadeUp`, `slideIn`).
+- **Flexbox:** `.sidebar`, `.action-buttons`, `.nav-item`.
+- **Grid:** `.stats-grid`, `.form-row`.
+- **Responsive:** `@media (max-width: 992px)` y `@media (max-width: 576px)` en `css/styles.css`.
 
 ---
 
