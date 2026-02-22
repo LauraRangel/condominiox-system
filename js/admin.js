@@ -3,6 +3,7 @@ let gastos = [];
 let recibos = [];
 let currentRecibosView = 'pendientes';
 let currentMesFilter = '';
+let editingPropietarioId = null;
 
 function toNumber(value) {
     if (typeof value === 'number') return value;
@@ -81,11 +82,75 @@ function listarPropietarios() {
             <td>${prop.torre}</td>
             <td>${prop.telefono || '-'}</td>
             <td>
+                <button class="btn btn-secondary btn-sm" onclick="editarPropietario(${prop.id})">Editar</button>
                 <button class="btn btn-danger btn-sm" onclick="eliminarPropietario(${prop.id})">Eliminar</button>
             </td>
         `;
         tbody.appendChild(tr);
     });
+}
+
+function limpiarFormularioPropietario() {
+    const form = document.getElementById('formPropietario');
+    const titulo = document.getElementById('tituloFormPropietario');
+    const btnGuardar = document.getElementById('btnGuardarPropietario');
+    const grupoContrasena = document.getElementById('grupoContrasenaPropietario');
+    const editId = document.getElementById('propietarioEditId');
+    const passwordInput = document.getElementById('propContrasena');
+
+    editingPropietarioId = null;
+    if (editId) editId.value = '';
+    if (titulo) titulo.textContent = 'Nuevo Propietario';
+    if (btnGuardar) btnGuardar.textContent = 'Guardar';
+    if (grupoContrasena) grupoContrasena.classList.remove('hidden');
+    if (passwordInput) {
+        passwordInput.required = true;
+        passwordInput.readOnly = true;
+    }
+    if (form) form.reset();
+}
+
+function cerrarFormularioPropietario() {
+    limpiarFormularioPropietario();
+    cerrarFormulario('agregarPropietario');
+}
+
+function abrirNuevoPropietario() {
+    limpiarFormularioPropietario();
+    mostrarFormulario('agregarPropietario');
+}
+
+function editarPropietario(id) {
+    const prop = propietarios.find(item => item.id === id);
+    if (!prop) {
+        alert('No se encontró el propietario');
+        return;
+    }
+
+    editingPropietarioId = id;
+    document.getElementById('propietarioEditId').value = id;
+    document.getElementById('propNombre').value = prop.nombre || '';
+    document.getElementById('propApellido').value = prop.apellido || '';
+    document.getElementById('propDNI').value = prop.dni || '';
+    document.getElementById('propTelefono').value = prop.telefono || '';
+    document.getElementById('propCorreo').value = prop.correo || '';
+    document.getElementById('propDepartamento').value = prop.nro_departamento || '';
+    document.getElementById('propTorre').value = prop.torre || '';
+    document.getElementById('propUsuario').value = prop.usuario || '';
+
+    const titulo = document.getElementById('tituloFormPropietario');
+    const btnGuardar = document.getElementById('btnGuardarPropietario');
+    const grupoContrasena = document.getElementById('grupoContrasenaPropietario');
+    const passwordInput = document.getElementById('propContrasena');
+    if (titulo) titulo.textContent = `Editar Propietario #${id}`;
+    if (btnGuardar) btnGuardar.textContent = 'Actualizar';
+    if (grupoContrasena) grupoContrasena.classList.add('hidden');
+    if (passwordInput) {
+        passwordInput.required = false;
+        passwordInput.readOnly = false;
+    }
+
+    mostrarFormulario('agregarPropietario');
 }
 
 if (document.getElementById('formPropietario')) {
@@ -117,8 +182,10 @@ if (document.getElementById('formPropietario')) {
             return;
         }
 
-        const { response, data } = await apiFetch('/propietarios', {
-            method: 'POST',
+        const endpoint = editingPropietarioId ? `/propietarios/${editingPropietarioId}` : '/propietarios';
+        const method = editingPropietarioId ? 'PUT' : 'POST';
+        const { response, data } = await apiFetch(endpoint, {
+            method,
             body: JSON.stringify(nuevoPropietario)
         });
 
@@ -127,13 +194,16 @@ if (document.getElementById('formPropietario')) {
             return;
         }
 
-        mostrarMensaje('mensajePropietario', 'Propietario registrado exitosamente', 'success');
-        document.getElementById('formPropietario').reset();
+        mostrarMensaje(
+            'mensajePropietario',
+            editingPropietarioId ? 'Propietario actualizado exitosamente' : 'Propietario registrado exitosamente',
+            'success'
+        );
         await cargarPropietarios();
         actualizarDashboard();
 
         setTimeout(() => {
-            cerrarFormulario('agregarPropietario');
+            cerrarFormularioPropietario();
         }, 2000);
     });
 }
@@ -440,7 +510,7 @@ function listarRecibos(tipo = 'pendientes', items = []) {
     const filtrados = items;
 
     if (filtrados.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="empty-state">No hay recibos ${tipo}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" class="empty-state">No hay recibos ${tipo}</td></tr>`;
         return;
     }
 
@@ -508,6 +578,13 @@ function setFiltroMesRecibos() {
     cargarRecibos(currentRecibosView);
 }
 
+function limpiarFiltroMesRecibos() {
+    const input = document.getElementById('filtroMesRecibos');
+    if (input) input.value = '';
+    currentMesFilter = '';
+    cargarRecibos(currentRecibosView);
+}
+
 function actualizarResumenMensual(items) {
     const tbody = document.getElementById('tablaResumenMensual');
     if (!tbody) return;
@@ -538,6 +615,10 @@ function actualizarBotonesRecibos() {
 
     btnPendientes.classList.toggle('btn-filter-active', currentRecibosView === 'pendientes');
     btnPagados.classList.toggle('btn-filter-active', currentRecibosView === 'pagados');
+    btnPendientes.classList.toggle('btn-state-pendientes-active', currentRecibosView === 'pendientes');
+    btnPagados.classList.toggle('btn-state-pagados-active', currentRecibosView === 'pagados');
+    btnPendientes.setAttribute('aria-pressed', String(currentRecibosView === 'pendientes'));
+    btnPagados.setAttribute('aria-pressed', String(currentRecibosView === 'pagados'));
 }
 
 // ========================================
@@ -579,6 +660,7 @@ if (document.getElementById('formCambiarContrasena')) {
 // ========================================
 
 window.addEventListener('DOMContentLoaded', function() {
+    limpiarFormularioPropietario();
     const fechaInput = document.getElementById('fechaRecibos');
     if (fechaInput && !fechaInput.value) {
         fechaInput.value = new Date().toISOString().slice(0, 10);

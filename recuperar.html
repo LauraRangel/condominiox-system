@@ -41,27 +41,33 @@
 
                 <div class="form-group">
                     <label for="nuevaContrasena">Nueva Contraseña</label>
-                    <input
-                        type="password"
-                        id="nuevaContrasena"
-                        name="nuevaContrasena"
-                        placeholder="Ingrese nueva contraseña"
-                        required
-                        minlength="6"
-                    >
+                    <div class="password-toggle-field">
+                        <input
+                            type="password"
+                            id="nuevaContrasena"
+                            name="nuevaContrasena"
+                            placeholder="Ingrese nueva contraseña"
+                            required
+                            minlength="6"
+                        >
+                        <button type="button" class="password-toggle-btn" data-target="nuevaContrasena">Ver</button>
+                    </div>
                     <small>Mínimo 6 caracteres</small>
                 </div>
 
                 <div class="form-group">
                     <label for="confirmarContrasena">Confirmar Contraseña</label>
-                    <input
-                        type="password"
-                        id="confirmarContrasena"
-                        name="confirmarContrasena"
-                        placeholder="Confirme la contraseña"
-                        required
-                        minlength="6"
-                    >
+                    <div class="password-toggle-field">
+                        <input
+                            type="password"
+                            id="confirmarContrasena"
+                            name="confirmarContrasena"
+                            placeholder="Confirme la contraseña"
+                            required
+                            minlength="6"
+                        >
+                        <button type="button" class="password-toggle-btn" data-target="confirmarContrasena">Ver</button>
+                    </div>
                 </div>
 
                 <div id="mensaje" class="mensaje"></div>
@@ -73,8 +79,8 @@
         </div>
     </div>
 
-    <script src="js/config.js?v=20260203"></script>
-    <script src="js/auth.js?v=20260203"></script>
+    <script src="js/config.js?v=20260222"></script>
+    <script src="js/auth.js?v=20260222"></script>
     <script>
         document.getElementById('formRecuperar').addEventListener('submit', async function(e) {
             e.preventDefault();

@@ -117,7 +117,7 @@
                 </div>
 
                 <div class="action-buttons">
-                    <button class="btn btn-primary" onclick="mostrarFormulario('agregarPropietario')">
+                    <button class="btn btn-primary" onclick="abrirNuevoPropietario()">
                         + Agregar Propietario
                     </button>
                     <button class="btn btn-secondary" onclick="listarPropietarios()">
@@ -128,10 +128,11 @@
                 <!-- Formulario Agregar Propietario -->
                 <div id="formAgregarPropietario" class="form-card hidden">
                     <div class="form-card-header">
-                        <h3>Nuevo Propietario</h3>
-                        <button class="btn-close" onclick="cerrarFormulario('agregarPropietario')">×</button>
+                        <h3 id="tituloFormPropietario">Nuevo Propietario</h3>
+                        <button class="btn-close" onclick="cerrarFormularioPropietario()">×</button>
                     </div>
                     <form id="formPropietario" class="panel-form">
+                        <input type="hidden" id="propietarioEditId">
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="propNombre">Nombre *</label>
@@ -175,15 +176,18 @@
                                 <label for="propUsuario">Usuario *</label>
                                 <input type="text" id="propUsuario" required>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group" id="grupoContrasenaPropietario">
                                 <label for="propContrasena">Contraseña *</label>
-                                <input type="password" id="propContrasena" required minlength="6">
+                                <div class="password-toggle-field">
+                                    <input type="password" id="propContrasena" required minlength="6">
+                                    <button type="button" class="password-toggle-btn" data-target="propContrasena">Ver</button>
+                                </div>
                             </div>
                         </div>
                         <div id="mensajePropietario" class="mensaje"></div>
                         <div class="form-actions">
-                            <button type="submit" class="btn btn-primary">Guardar</button>
-                            <button type="button" class="btn btn-secondary" onclick="cerrarFormulario('agregarPropietario')">Cancelar</button>
+                            <button type="submit" class="btn btn-primary" id="btnGuardarPropietario">Guardar</button>
+                            <button type="button" class="btn btn-secondary" onclick="cerrarFormularioPropietario()">Cancelar</button>
                         </div>
                     </form>
                 </div>
@@ -364,27 +368,44 @@
                     </div>
                 </div>
 
-                <div class="recibos-search">
-                    <div class="recibos-search-title">Buscar recibos</div>
-                    <div class="recibos-search-hint">Selecciona un mes para filtrar. Si dejas vacío, verás todos.</div>
-                    <input type="month" id="filtroMesRecibos" class="input-inline" placeholder="Mes (YYYY-MM)" title="Filtrar por mes">
-                </div>
+                <div class="recibos-controls-grid">
+                    <div class="recibos-control-card">
+                        <div class="recibos-search-title">Generación y Recalculo</div>
+                        <div class="recibos-search-hint">Primero define la fecha/mes y luego ejecuta la acción.</div>
+                        <div class="recibos-inline-group">
+                            <label for="fechaRecibos">Fecha de emisión</label>
+                            <input type="date" id="fechaRecibos" class="input-inline" title="Fecha de generación">
+                            <button class="btn btn-primary" onclick="generarRecibos()">
+                                📄 Generar Recibos
+                            </button>
+                        </div>
+                        <div class="recibos-inline-group">
+                            <label for="mesRecibos">Mes a recalcular</label>
+                            <input type="month" id="mesRecibos" class="input-inline" title="Mes a recalcular">
+                            <button class="btn btn-secondary" onclick="recalcularRecibos()">
+                                🔁 Recalcular Mes
+                            </button>
+                        </div>
+                    </div>
 
-                <div class="action-buttons">
-                    <input type="date" id="fechaRecibos" class="input-inline" title="Fecha de generación">
-                    <button class="btn btn-primary" onclick="generarRecibos()">
-                        📄 Generar Recibos
-                    </button>
-                    <input type="month" id="mesRecibos" class="input-inline" title="Mes a recalcular">
-                    <button class="btn btn-secondary" onclick="recalcularRecibos()">
-                        🔁 Recalcular Mes
-                    </button>
-                    <button class="btn btn-secondary" id="btnRecibosPendientes" onclick="setRecibosVista('pendientes')">
-                        Pendientes
-                    </button>
-                    <button class="btn btn-success" id="btnRecibosPagados" onclick="setRecibosVista('pagados')">
-                        Pagados
-                    </button>
+                    <div class="recibos-control-card">
+                        <div class="recibos-search-title">Búsqueda y Estado</div>
+                        <div class="recibos-search-hint">Usa estos filtros para revisar solo lo que necesitas.</div>
+                        <div class="recibos-inline-group">
+                            <label for="filtroMesRecibos">Filtrar por mes</label>
+                            <input type="month" id="filtroMesRecibos" class="input-inline" placeholder="Mes (YYYY-MM)" title="Filtrar por mes">
+                            <button class="btn btn-secondary" onclick="limpiarFiltroMesRecibos()">Limpiar</button>
+                        </div>
+                        <div class="recibos-inline-group">
+                            <label>Estado de vista</label>
+                            <button class="btn btn-secondary" id="btnRecibosPendientes" onclick="setRecibosVista('pendientes')">
+                                Pendientes
+                            </button>
+                            <button class="btn btn-success" id="btnRecibosPagados" onclick="setRecibosVista('pagados')">
+                                Pagados
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="data-table-container">
@@ -426,16 +447,25 @@
                     <form id="formCambiarContrasena" class="panel-form">
                         <div class="form-group">
                             <label for="actualContrasena">Contraseña Actual *</label>
-                            <input type="password" id="actualContrasena" required minlength="6">
+                            <div class="password-toggle-field">
+                                <input type="password" id="actualContrasena" required minlength="6">
+                                <button type="button" class="password-toggle-btn" data-target="actualContrasena">Ver</button>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label for="nuevaContrasena">Nueva Contraseña *</label>
-                            <input type="password" id="nuevaContrasena" required minlength="6">
+                            <div class="password-toggle-field">
+                                <input type="password" id="nuevaContrasena" required minlength="6">
+                                <button type="button" class="password-toggle-btn" data-target="nuevaContrasena">Ver</button>
+                            </div>
                             <small>Mínimo 6 caracteres</small>
                         </div>
                         <div class="form-group">
                             <label for="confirmarContrasena">Confirmar Contraseña *</label>
-                            <input type="password" id="confirmarContrasena" required minlength="6">
+                            <div class="password-toggle-field">
+                                <input type="password" id="confirmarContrasena" required minlength="6">
+                                <button type="button" class="password-toggle-btn" data-target="confirmarContrasena">Ver</button>
+                            </div>
                         </div>
                         <div id="mensajePerfil" class="mensaje"></div>
                         <div class="form-actions">
@@ -447,9 +477,9 @@
         </main>
     </div>
 
-    <script src="js/config.js?v=20260203"></script>
-    <script src="js/auth.js?v=20260203"></script>
-    <script src="js/admin.js?v=20260203"></script>
+    <script src="js/config.js?v=20260222"></script>
+    <script src="js/auth.js?v=20260222"></script>
+    <script src="js/admin.js?v=20260222"></script>
     <script>
         // Override mostrarSeccion para el nuevo diseño
         function mostrarSeccion(seccionId, btn) {

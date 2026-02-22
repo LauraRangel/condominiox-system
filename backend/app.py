@@ -210,6 +210,38 @@ def mi_perfil():
     )
 
 
+@app.put("/api/mi-perfil")
+def actualizar_mi_perfil():
+    payload, err = _get_payload()
+    if err:
+        return jsonify({"error": err[0]}), err[1]
+
+    if payload.get("tipo") != "Propietario":
+        return jsonify({"error": "No autorizado"}), 403
+
+    body = request.get_json(silent=True) or {}
+    correo = (body.get("correo") or "").strip() or None
+    telefono = (body.get("telefono") or "").strip() or None
+
+    propietario_id = payload.get("propietario_id")
+    if not propietario_id:
+        return jsonify({"error": "Propietario no encontrado"}), 404
+
+    row = execute_returning(
+        """
+        UPDATE propietarios
+        SET correo = %s, telefono = %s
+        WHERE id = %s
+        RETURNING id, correo, telefono
+        """,
+        [correo, telefono, propietario_id],
+    )
+    if not row:
+        return jsonify({"error": "Propietario no encontrado"}), 404
+
+    return jsonify(row)
+
+
 @app.put("/api/mi-contrasena")
 def cambiar_mi_contrasena():
     payload, err = _get_payload()
@@ -289,10 +321,11 @@ def listar_propietarios():
 
     rows = fetch_all(
         """
-        SELECT id, usuario_id, nombre, apellido, dni, correo,
-               telefono, nro_departamento, torre
-        FROM propietarios
-        ORDER BY id
+        SELECT p.id, p.usuario_id, u.usuario, p.nombre, p.apellido, p.dni, p.correo,
+               p.telefono, p.nro_departamento, p.torre
+        FROM propietarios p
+        LEFT JOIN usuarios u ON u.id = p.usuario_id
+        ORDER BY p.id
         """
     )
     lista = ListaPropietarios()
@@ -370,6 +403,99 @@ def crear_propietario():
         return jsonify({"error": "No se pudo crear el propietario"}), 500
 
     return jsonify(row), 201
+
+
+@app.put("/api/propietarios/<int:propietario_id>")
+def actualizar_propietario(propietario_id):
+    payload, err = _get_payload()
+    if err:
+        return jsonify({"error": err[0]}), err[1]
+    role_err = _require_roles(payload, "Administrador")
+    if role_err:
+        return jsonify({"error": role_err[0]}), role_err[1]
+
+    body = request.get_json(silent=True) or {}
+    required = ["usuario", "nombre", "apellido", "dni", "nro_departamento", "torre"]
+    if not all(str(body.get(k) or "").strip() for k in required):
+        return jsonify({"error": "Datos incompletos"}), 400
+
+    dni = str(body.get("dni") or "").strip()
+    if not dni.isdigit() or len(dni) != 8:
+        return jsonify({"error": "El DNI debe tener 8 dígitos"}), 400
+
+    existente = fetch_one(
+        """
+        SELECT p.id, p.usuario_id
+        FROM propietarios p
+        WHERE p.id = %s
+        """,
+        [propietario_id],
+    )
+    if not existente:
+        return jsonify({"error": "Propietario no encontrado"}), 404
+
+    usuario_existe = fetch_one(
+        """
+        SELECT id FROM usuarios
+        WHERE usuario = %s AND id <> %s
+        """,
+        [body["usuario"].strip(), existente["usuario_id"]],
+    )
+    if usuario_existe:
+        return jsonify({"error": "Ya existe otro usuario con ese nombre"}), 409
+
+    dni_existe = fetch_one(
+        """
+        SELECT id FROM propietarios
+        WHERE dni = %s AND id <> %s
+        """,
+        [dni, propietario_id],
+    )
+    if dni_existe:
+        return jsonify({"error": "Ya existe otro propietario con ese DNI"}), 409
+
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE usuarios
+                    SET usuario = %s
+                    WHERE id = %s
+                    """,
+                    [body["usuario"].strip(), existente["usuario_id"]],
+                )
+                cur.execute(
+                    """
+                    UPDATE propietarios
+                    SET nombre = %s,
+                        apellido = %s,
+                        dni = %s,
+                        correo = %s,
+                        telefono = %s,
+                        nro_departamento = %s,
+                        torre = %s
+                    WHERE id = %s
+                    RETURNING id, usuario_id, nombre, apellido, dni, correo, telefono, nro_departamento, torre
+                    """,
+                    [
+                        body["nombre"].strip(),
+                        body["apellido"].strip(),
+                        dni,
+                        (body.get("correo") or None),
+                        (body.get("telefono") or None),
+                        body["nro_departamento"].strip(),
+                        body["torre"].strip(),
+                        propietario_id,
+                    ],
+                )
+                row = cur.fetchone()
+            conn.commit()
+    except Exception:
+        return jsonify({"error": "No se pudo actualizar el propietario"}), 500
+
+    row["usuario"] = body["usuario"].strip()
+    return jsonify(row)
 
 
 @app.delete("/api/propietarios/<int:propietario_id>")

@@ -155,3 +155,20 @@ function mostrarMensaje(elementId, texto, tipo = 'success') {
         }, 5000);
     }
 }
+
+function inicializarToggleContrasenas() {
+    const botones = document.querySelectorAll('.password-toggle-btn[data-target]');
+    botones.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            if (!input) return;
+
+            const mostrando = input.type === 'text';
+            input.type = mostrando ? 'password' : 'text';
+            this.textContent = mostrando ? 'Ver' : 'Ocultar';
+        });
+    });
+}
+
+window.addEventListener('DOMContentLoaded', inicializarToggleContrasenas);

@@ -31,6 +31,10 @@ async function cargarInformacionPersonal() {
     document.getElementById('infoDNI').textContent = perfil.dni || '-';
     document.getElementById('infoCorreo').textContent = perfil.correo || '-';
     document.getElementById('infoTelefono').textContent = perfil.telefono || '-';
+    const correoInput = document.getElementById('editarCorreo');
+    const telefonoInput = document.getElementById('editarTelefono');
+    if (correoInput) correoInput.value = perfil.correo || '';
+    if (telefonoInput) telefonoInput.value = perfil.telefono || '';
 
     await cargarEstadisticas();
 }
@@ -71,7 +75,7 @@ async function cargarRecibosPendientes() {
     const tbody = document.getElementById('tablaRecibosPendientes');
 
     if (recibosPendientes.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No tiene recibos pendientes</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="empty-state">No tiene recibos pendientes</td></tr>';
         return;
     }
 
@@ -150,7 +154,7 @@ async function cargarRecibosPagados() {
     const tbody = document.getElementById('tablaRecibosPagados');
 
     if (recibosPagados.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No tiene recibos pagados aún</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="empty-state">No tiene recibos pagados aún</td></tr>';
         return;
     }
 
@@ -213,6 +217,26 @@ if (document.getElementById('formCambiarContrasena')) {
 
         mostrarMensaje('mensajePerfil', 'Contraseña cambiada exitosamente', 'success');
         document.getElementById('formCambiarContrasena').reset();
+    });
+}
+
+if (document.getElementById('formEditarContacto')) {
+    document.getElementById('formEditarContacto').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const correo = document.getElementById('editarCorreo').value.trim();
+        const telefono = document.getElementById('editarTelefono').value.trim();
+
+        const { response, data } = await apiFetch('/mi-perfil', {
+            method: 'PUT',
+            body: JSON.stringify({ correo, telefono })
+        });
+        if (!response.ok) {
+            mostrarMensaje('mensajeContacto', data.error || 'No se pudo actualizar', 'error');
+            return;
+        }
+
+        mostrarMensaje('mensajeContacto', 'Datos actualizados', 'success');
+        await cargarInformacionPersonal();
     });
 }
 

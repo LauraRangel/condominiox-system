@@ -99,6 +99,28 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="form-card" style="max-width: 640px; margin-top: 1rem;">
+                    <div class="form-card-header">
+                        <h3>Editar Contacto</h3>
+                    </div>
+                    <form id="formEditarContacto" class="panel-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="editarCorreo">Correo</label>
+                                <input type="email" id="editarCorreo" placeholder="correo@ejemplo.com">
+                            </div>
+                            <div class="form-group">
+                                <label for="editarTelefono">Teléfono</label>
+                                <input type="tel" id="editarTelefono" placeholder="999999999">
+                            </div>
+                        </div>
+                        <div id="mensajeContacto" class="mensaje"></div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Guardar Contacto</button>
+                        </div>
+                    </form>
+                </div>
             </section>
 
             <!-- Recibos Pendientes -->
@@ -181,16 +203,25 @@
                     <form id="formCambiarContrasena" class="panel-form">
                         <div class="form-group">
                             <label for="actualContrasena">Contraseña Actual *</label>
-                            <input type="password" id="actualContrasena" required minlength="6">
+                            <div class="password-toggle-field">
+                                <input type="password" id="actualContrasena" required minlength="6">
+                                <button type="button" class="password-toggle-btn" data-target="actualContrasena">Ver</button>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label for="nuevaContrasena">Nueva Contraseña *</label>
-                            <input type="password" id="nuevaContrasena" required minlength="6">
+                            <div class="password-toggle-field">
+                                <input type="password" id="nuevaContrasena" required minlength="6">
+                                <button type="button" class="password-toggle-btn" data-target="nuevaContrasena">Ver</button>
+                            </div>
                             <small>Mínimo 6 caracteres</small>
                         </div>
                         <div class="form-group">
                             <label for="confirmarContrasena">Confirmar Contraseña *</label>
-                            <input type="password" id="confirmarContrasena" required minlength="6">
+                            <div class="password-toggle-field">
+                                <input type="password" id="confirmarContrasena" required minlength="6">
+                                <button type="button" class="password-toggle-btn" data-target="confirmarContrasena">Ver</button>
+                            </div>
                         </div>
                         <div id="mensajePerfil" class="mensaje"></div>
                         <div class="form-actions">
@@ -202,9 +233,9 @@
         </main>
     </div>
 
-    <script src="js/config.js?v=20260203"></script>
-    <script src="js/auth.js?v=20260203"></script>
-    <script src="js/propietario.js?v=20260203"></script>
+    <script src="js/config.js?v=20260222"></script>
+    <script src="js/auth.js?v=20260222"></script>
+    <script src="js/propietario.js?v=20260222"></script>
     <script>
         // Override mostrarSeccion para el nuevo diseño
         function mostrarSeccion(seccionId, btn) {
