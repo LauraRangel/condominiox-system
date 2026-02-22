@@ -14,7 +14,7 @@
         <div class="recuperar-card">
             <img src="img/logo.png" alt="CondominioX" class="logo-mini">
             <h2>Recuperar Contraseña</h2>
-            <p class="text-muted">Responda la pregunta de seguridad para restablecer su contraseña</p>
+            <p class="text-muted">Ingrese su usuario y DNI para restablecer su contraseña</p>
 
             <form id="formRecuperar" class="form-login">
                 <div class="form-group">
@@ -29,15 +29,14 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="preguntaSeguridad">Respuesta de Seguridad</label>
+                    <label for="dni">DNI</label>
                     <input
                         type="text"
-                        id="preguntaSeguridad"
-                        name="preguntaSeguridad"
-                        placeholder="Ej: Nombre de tu primera mascota"
+                        id="dni"
+                        name="dni"
+                        placeholder="Ingrese su DNI (8 dígitos)"
                         required
                     >
-                    <small>Responda la pregunta que configuró al crear su cuenta</small>
                 </div>
 
                 <div class="form-group">
@@ -81,13 +80,18 @@
             e.preventDefault();
 
             const usuario = document.getElementById('usuario').value;
-            const preguntaSeguridad = document.getElementById('preguntaSeguridad').value;
+            const dni = document.getElementById('dni').value.trim();
             const nuevaContrasena = document.getElementById('nuevaContrasena').value;
             const confirmarContrasena = document.getElementById('confirmarContrasena').value;
             const mensaje = document.getElementById('mensaje');
 
             if (nuevaContrasena !== confirmarContrasena) {
                 mensaje.textContent = 'Las contraseñas no coinciden';
+                mensaje.className = 'mensaje error';
+                return;
+            }
+            if (!/^\d{8}$/.test(dni)) {
+                mensaje.textContent = 'El DNI debe tener 8 dígitos';
                 mensaje.className = 'mensaje error';
                 return;
             }
@@ -100,7 +104,7 @@
                     },
                     body: JSON.stringify({
                         usuario: usuario,
-                        pregunta_seguridad: preguntaSeguridad,
+                        dni: dni,
                         nueva_contrasena: nuevaContrasena
                     })
                 });

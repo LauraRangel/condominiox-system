@@ -138,6 +138,39 @@ def login():
     return jsonify({"token": token, "user": user_data})
 
 
+@app.post("/api/recuperar-contrasena")
+def recuperar_contrasena():
+    body = request.get_json(silent=True) or {}
+    usuario = (body.get("usuario") or "").strip()
+    dni = (body.get("dni") or "").strip()
+    nueva = body.get("nueva_contrasena") or ""
+
+    if not usuario or not dni or not nueva:
+        return jsonify({"error": "Datos incompletos"}), 400
+    if len(nueva) < 6:
+        return jsonify({"error": "La nueva contraseña debe tener al menos 6 caracteres"}), 400
+
+    user = fetch_one(
+        """
+        SELECT u.id, p.dni
+        FROM usuarios u
+        LEFT JOIN propietarios p ON p.usuario_id = u.id
+        WHERE u.usuario = %s
+        """,
+        [usuario],
+    )
+    if not user:
+        return jsonify({"error": "Usuario no encontrado"}), 404
+    if (user.get("dni") or "") != dni:
+        return jsonify({"error": "Verificación inválida"}), 403
+
+    execute(
+        "UPDATE usuarios SET password_hash = %s WHERE id = %s",
+        [hash_password(nueva), user["id"]],
+    )
+    return jsonify({"ok": True})
+
+
 @app.get("/api/mi-perfil")
 def mi_perfil():
     payload, err = _get_payload()
@@ -175,6 +208,36 @@ def mi_perfil():
             },
         }
     )
+
+
+@app.put("/api/mi-contrasena")
+def cambiar_mi_contrasena():
+    payload, err = _get_payload()
+    if err:
+        return jsonify({"error": err[0]}), err[1]
+
+    body = request.get_json(silent=True) or {}
+    actual = body.get("actual_contrasena") or ""
+    nueva = body.get("nueva_contrasena") or ""
+    if not actual or not nueva:
+        return jsonify({"error": "Datos incompletos"}), 400
+    if len(nueva) < 6:
+        return jsonify({"error": "La nueva contraseña debe tener al menos 6 caracteres"}), 400
+
+    user = fetch_one(
+        "SELECT id, password_hash FROM usuarios WHERE id = %s",
+        [payload.get("sub")],
+    )
+    if not user:
+        return jsonify({"error": "Usuario no encontrado"}), 404
+    if not verify_password(user["password_hash"], actual):
+        return jsonify({"error": "Contraseña actual incorrecta"}), 403
+
+    execute(
+        "UPDATE usuarios SET password_hash = %s WHERE id = %s",
+        [hash_password(nueva), user["id"]],
+    )
+    return jsonify({"ok": True})
 
 
 @app.get("/api/configuracion")
@@ -782,6 +845,32 @@ def pagar_recibo(recibo_id):
     monto = body.get("monto")
     if monto is None:
         return jsonify({"error": "Monto requerido"}), 400
+    try:
+        monto = float(monto)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Monto inválido"}), 400
+    if monto <= 0:
+        return jsonify({"error": "El monto debe ser mayor a cero"}), 400
+
+    current = fetch_one(
+        """
+        SELECT id, monto_pagado, monto_administracion, monto_agua, monto_luz, monto_mantenimiento
+        FROM recibos
+        WHERE id = %s
+        """,
+        [recibo_id],
+    )
+    if not current:
+        return jsonify({"error": "Recibo no encontrado"}), 404
+    total_actual = (
+        float(current["monto_administracion"])
+        + float(current["monto_agua"])
+        + float(current["monto_luz"])
+        + float(current["monto_mantenimiento"])
+    )
+    saldo_actual = total_actual - float(current["monto_pagado"] or 0)
+    if monto > saldo_actual:
+        return jsonify({"error": f"El monto excede el saldo pendiente ({saldo_actual:.2f})"}), 400
 
     row = execute_returning(
         """

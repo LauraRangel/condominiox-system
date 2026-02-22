@@ -187,14 +187,27 @@ async function cargarRecibosPagados() {
 // ========================================
 
 if (document.getElementById('formCambiarContrasena')) {
-    document.getElementById('formCambiarContrasena').addEventListener('submit', function(e) {
+    document.getElementById('formCambiarContrasena').addEventListener('submit', async function(e) {
         e.preventDefault();
 
+        const actualContrasena = document.getElementById('actualContrasena').value;
         const nuevaContrasena = document.getElementById('nuevaContrasena').value;
         const confirmarContrasena = document.getElementById('confirmarContrasena').value;
 
         if (nuevaContrasena !== confirmarContrasena) {
             mostrarMensaje('mensajePerfil', 'Las contraseñas no coinciden', 'error');
+            return;
+        }
+
+        const { response, data } = await apiFetch('/mi-contrasena', {
+            method: 'PUT',
+            body: JSON.stringify({
+                actual_contrasena: actualContrasena,
+                nueva_contrasena: nuevaContrasena
+            })
+        });
+        if (!response.ok) {
+            mostrarMensaje('mensajePerfil', data.error || 'No se pudo cambiar la contraseña', 'error');
             return;
         }
 
