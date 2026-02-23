@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Panel de Administrador - CondominioX">
     <title>Panel Administrador - CondominioX</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/styles.css?v=20260223">
 </head>
 <body>
     <div class="app-container">
@@ -389,11 +389,16 @@
                     </div>
 
                     <div class="recibos-control-card">
-                        <div class="recibos-search-title">Búsqueda y Estado</div>
+                        <div class="recibos-search-title">
+                            <svg class="title-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M10 4a6 6 0 1 0 3.87 10.58l4.27 4.27 1.41-1.41-4.27-4.27A6 6 0 0 0 10 4Zm0 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z"></path>
+                            </svg>
+                            Búsqueda y Estado
+                        </div>
                         <div class="recibos-search-hint">Usa estos filtros para revisar solo lo que necesitas.</div>
                         <div class="recibos-inline-group">
                             <label for="filtroMesRecibos">Filtrar por mes</label>
-                            <input type="month" id="filtroMesRecibos" class="input-inline" placeholder="Mes (YYYY-MM)" title="Filtrar por mes">
+                            <input type="month" id="filtroMesRecibos" class="input-inline" placeholder="Mes (YYYY-MM)" title="Filtrar por mes" onchange="setFiltroMesRecibos()">
                             <button class="btn btn-secondary" onclick="limpiarFiltroMesRecibos()">Limpiar</button>
                         </div>
                         <div class="recibos-inline-group">
@@ -477,9 +482,20 @@
         </main>
     </div>
 
-    <script src="js/config.js?v=20260222"></script>
-    <script src="js/auth.js?v=20260222"></script>
-    <script src="js/admin.js?v=20260222"></script>
+    <div id="confirmModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+        <div class="modal-card">
+            <h3 id="confirmModalTitle">Confirmar acción</h3>
+            <p id="confirmModalMessage">¿Desea continuar?</p>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="confirmModalCancel">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="confirmModalAccept">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/config.js?v=20260223"></script>
+    <script src="js/auth.js?v=20260223"></script>
+    <script src="js/admin.js?v=20260223"></script>
     <script>
         // Override mostrarSeccion para el nuevo diseño
         function mostrarSeccion(seccionId, btn) {

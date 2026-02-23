@@ -4,6 +4,7 @@ let recibos = [];
 let currentRecibosView = 'pendientes';
 let currentMesFilter = '';
 let editingPropietarioId = null;
+let confirmModalResolver = null;
 
 function toNumber(value) {
     if (typeof value === 'number') return value;
@@ -25,6 +26,45 @@ function formatDateRaw(dateString) {
 function obtenerSiguienteId(items, campo = 'id') {
     if (!items || items.length === 0) return 1;
     return Math.max(...items.map(item => item[campo])) + 1;
+}
+
+function inicializarConfirmModal() {
+    const modal = document.getElementById('confirmModal');
+    const btnCancel = document.getElementById('confirmModalCancel');
+    const btnAccept = document.getElementById('confirmModalAccept');
+    if (!modal || !btnCancel || !btnAccept) return;
+
+    btnCancel.addEventListener('click', () => cerrarConfirmModal(false));
+    btnAccept.addEventListener('click', () => cerrarConfirmModal(true));
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) cerrarConfirmModal(false);
+    });
+}
+
+function cerrarConfirmModal(accepted) {
+    const modal = document.getElementById('confirmModal');
+    if (modal) modal.classList.add('hidden');
+    if (confirmModalResolver) {
+        confirmModalResolver(accepted);
+        confirmModalResolver = null;
+    }
+}
+
+function confirmModal(message, title = 'Confirmar acción') {
+    const modal = document.getElementById('confirmModal');
+    const titleEl = document.getElementById('confirmModalTitle');
+    const messageEl = document.getElementById('confirmModalMessage');
+    if (!modal || !titleEl || !messageEl) {
+        return Promise.resolve(window.confirm(message));
+    }
+
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    modal.classList.remove('hidden');
+
+    return new Promise((resolve) => {
+        confirmModalResolver = resolve;
+    });
 }
 
 // ========================================
@@ -211,7 +251,7 @@ if (document.getElementById('formPropietario')) {
 }
 
 async function eliminarPropietario(id) {
-    if (!confirm('¿Está seguro de eliminar este propietario?')) {
+    if (!(await confirmModal('¿Está seguro de eliminar este propietario?', 'Eliminar propietario'))) {
         return;
     }
 
@@ -414,7 +454,7 @@ function listarGastos() {
 }
 
 async function eliminarGasto(id) {
-    if (!confirm('¿Eliminar este gasto?')) {
+    if (!(await confirmModal('¿Eliminar este gasto?', 'Eliminar gasto'))) {
         return;
     }
 
@@ -437,7 +477,7 @@ async function eliminarGasto(id) {
 // ========================================
 
 async function generarRecibos() {
-    if (!confirm('¿Generar recibos para todos los propietarios?')) {
+    if (!(await confirmModal('¿Generar recibos para todos los propietarios?', 'Generar recibos'))) {
         return;
     }
 
@@ -468,7 +508,7 @@ async function recalcularRecibos() {
         ? mesInput.value
         : new Date().toISOString().slice(0, 7);
 
-    if (!confirm(`¿Recalcular recibos del mes ${mes}?`)) {
+    if (!(await confirmModal(`¿Recalcular recibos del mes ${mes}?`, 'Recalcular recibos'))) {
         return;
     }
 
@@ -549,7 +589,7 @@ function listarRecibos(tipo = 'pendientes', items = []) {
 }
 
 async function eliminarRecibo(id) {
-    if (!confirm('¿Eliminar este recibo?')) {
+    if (!(await confirmModal('¿Eliminar este recibo?', 'Eliminar recibo'))) {
         return;
     }
 
@@ -662,6 +702,7 @@ if (document.getElementById('formCambiarContrasena')) {
 // ========================================
 
 window.addEventListener('DOMContentLoaded', function() {
+    inicializarConfirmModal();
     limpiarFormularioPropietario();
     const fechaInput = document.getElementById('fechaRecibos');
     if (fechaInput && !fechaInput.value) {
@@ -670,10 +711,6 @@ window.addEventListener('DOMContentLoaded', function() {
     const mesInput = document.getElementById('mesRecibos');
     if (mesInput && !mesInput.value) {
         mesInput.value = new Date().toISOString().slice(0, 7);
-    }
-    const filtroMes = document.getElementById('filtroMesRecibos');
-    if (filtroMes) {
-        filtroMes.addEventListener('change', setFiltroMesRecibos);
     }
     cargarDashboard();
     setRecibosVista('pendientes');
