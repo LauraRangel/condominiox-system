@@ -8,7 +8,13 @@ import jwt
 
 from db import fetch_one, fetch_all, execute, execute_returning, get_db
 from security import verify_password, hash_password
-from structures import ListaPropietarios, MatrizRecibos
+from structures import (
+    ListaPropietarios,
+    MatrizRecibos,
+    ArbolRecibosBST,
+    ArbolRecibosAVL,
+    ColaPrioridadMorosos,
+)
 
 load_dotenv()
 
@@ -1033,6 +1039,171 @@ def pagar_recibo(recibo_id):
     recibo["total"] = _recibo_total(recibo)
     recibo["saldo"] = _recibo_saldo(recibo)
     return jsonify(recibo)
+
+
+def _recibos_para_estructuras(mes_filter="", estado=""):
+    filtros = []
+    params = []
+    if estado == "pendientes":
+        filtros.append("r.pagado = FALSE")
+    elif estado == "pagados":
+        filtros.append("r.pagado = TRUE")
+    if mes_filter:
+        filtros.append("TO_CHAR(r.fecha_emision, 'YYYY-MM') = %s")
+        params.append(mes_filter)
+
+    where = f"WHERE {' AND '.join(filtros)}" if filtros else ""
+    rows = fetch_all(
+        f"""
+        SELECT r.id, r.propietario_id, r.monto_administracion, r.monto_agua,
+               r.monto_luz, r.monto_mantenimiento, r.monto_pagado,
+               r.fecha_emision, r.fecha_pago, r.pagado,
+               p.nombre, p.apellido, p.nro_departamento, p.torre
+        FROM recibos r
+        JOIN propietarios p ON p.id = r.propietario_id
+        {where}
+        ORDER BY r.fecha_emision DESC, r.id DESC
+        """,
+        params,
+    )
+
+    items = []
+    for row in rows:
+        recibo = {
+            "id": row["id"],
+            "propietario_id": row["propietario_id"],
+            "propietario": {"nombre": row["nombre"], "apellido": row["apellido"]},
+            "nro_departamento": row["nro_departamento"],
+            "torre": row["torre"],
+            "monto_administracion": row["monto_administracion"],
+            "monto_agua": row["monto_agua"],
+            "monto_luz": row["monto_luz"],
+            "monto_mantenimiento": row["monto_mantenimiento"],
+            "monto_pagado": row.get("monto_pagado", 0),
+            "fecha_emision": row["fecha_emision"].isoformat(),
+            "fecha_pago": row["fecha_pago"].isoformat() if row["fecha_pago"] else None,
+            "pagado": row["pagado"],
+        }
+        recibo["total"] = _recibo_total(recibo)
+        recibo["saldo"] = _recibo_saldo(recibo)
+        items.append(recibo)
+    return items
+
+
+def _parse_saldo_range():
+    saldo_min = request.args.get("saldo_min")
+    saldo_max = request.args.get("saldo_max")
+    try:
+        min_val = float(saldo_min) if saldo_min not in (None, "") else None
+        max_val = float(saldo_max) if saldo_max not in (None, "") else None
+    except ValueError:
+        return None, None, ("Parámetros de saldo inválidos", 400)
+    return min_val, max_val, None
+
+
+def _tree_filtered_items(tree, recorrido, min_val, max_val):
+    if min_val is None and max_val is None:
+        return tree.recorrer(recorrido)
+    if min_val is None:
+        min_val = -1e18
+    if max_val is None:
+        max_val = 1e18
+    return tree.rango((float(min_val), -1), (float(max_val), 10**12))
+
+
+@app.get("/api/recibos/estructura/bst")
+def buscar_recibos_bst():
+    payload, err = _get_payload()
+    if err:
+        return jsonify({"error": err[0]}), err[1]
+    role_err = _require_roles(payload, "Administrador")
+    if role_err:
+        return jsonify({"error": role_err[0]}), role_err[1]
+
+    mes = (request.args.get("mes") or "").strip()
+    estado = (request.args.get("estado") or "").strip().lower()
+    recorrido = (request.args.get("recorrido") or "inorden").strip().lower()
+    if recorrido not in ("inorden", "preorden", "postorden"):
+        recorrido = "inorden"
+
+    min_val, max_val, parse_err = _parse_saldo_range()
+    if parse_err:
+        return jsonify({"error": parse_err[0]}), parse_err[1]
+
+    items = _recibos_para_estructuras(mes, estado)
+    tree = ArbolRecibosBST()
+    for item in items:
+        tree.insertar((float(item["saldo"]), item["id"]), item)
+
+    result = _tree_filtered_items(tree, recorrido, min_val, max_val)
+    return jsonify({"estructura": "bst", "total": len(result), "items": result})
+
+
+@app.get("/api/recibos/estructura/avl")
+def buscar_recibos_avl():
+    payload, err = _get_payload()
+    if err:
+        return jsonify({"error": err[0]}), err[1]
+    role_err = _require_roles(payload, "Administrador")
+    if role_err:
+        return jsonify({"error": role_err[0]}), role_err[1]
+
+    mes = (request.args.get("mes") or "").strip()
+    estado = (request.args.get("estado") or "").strip().lower()
+    recorrido = (request.args.get("recorrido") or "inorden").strip().lower()
+    if recorrido not in ("inorden", "preorden", "postorden"):
+        recorrido = "inorden"
+
+    min_val, max_val, parse_err = _parse_saldo_range()
+    if parse_err:
+        return jsonify({"error": parse_err[0]}), parse_err[1]
+
+    items = _recibos_para_estructuras(mes, estado)
+    tree = ArbolRecibosAVL()
+    for item in items:
+        tree.insertar((float(item["saldo"]), item["id"]), item)
+
+    result = _tree_filtered_items(tree, recorrido, min_val, max_val)
+    return jsonify({"estructura": "avl", "total": len(result), "items": result})
+
+
+@app.get("/api/recibos/morosos/prioridad")
+def morosos_prioridad():
+    payload, err = _get_payload()
+    if err:
+        return jsonify({"error": err[0]}), err[1]
+    role_err = _require_roles(payload, "Administrador")
+    if role_err:
+        return jsonify({"error": role_err[0]}), role_err[1]
+
+    mes = (request.args.get("mes") or "").strip()
+    limit = request.args.get("limit", "5")
+    try:
+        limit = max(1, min(int(limit), 100))
+    except ValueError:
+        limit = 5
+
+    pendientes = _recibos_para_estructuras(mes, "pendientes")
+    hoy = dt.date.today()
+    cola = ColaPrioridadMorosos()
+    for r in pendientes:
+        fecha = dt.date.fromisoformat(r["fecha_emision"][:10])
+        dias = max((hoy - fecha).days, 0)
+        cola.enqueue(
+            {
+                "recibo_id": r["id"],
+                "propietario_id": r["propietario_id"],
+                "propietario": r["propietario"],
+                "nro_departamento": r["nro_departamento"],
+                "torre": r["torre"],
+                "saldo": float(r["saldo"]),
+                "dias_pendiente": dias,
+                "fecha_emision": r["fecha_emision"],
+            }
+        )
+
+    items = cola.to_sorted_list(limit=limit)
+    return jsonify({"total": len(items), "items": items})
 
 
 if __name__ == "__main__":

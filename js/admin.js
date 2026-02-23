@@ -6,6 +6,23 @@ let currentMesFilter = '';
 let editingPropietarioId = null;
 let confirmModalResolver = null;
 
+class PilaFiltros {
+    constructor() {
+        this.items = [];
+    }
+    push(item) {
+        this.items.push(item);
+    }
+    pop() {
+        return this.items.length ? this.items.pop() : null;
+    }
+    size() {
+        return this.items.length;
+    }
+}
+
+const pilaFiltrosEstructura = new PilaFiltros();
+
 function toNumber(value) {
     if (typeof value === 'number') return value;
     const parsed = parseFloat(value);
@@ -82,6 +99,35 @@ function actualizarDashboard() {
 
     const recibosPagados = recibos.filter(r => r.pagado);
     document.getElementById('recibosPagados').textContent = recibosPagados.length;
+}
+
+function obtenerFiltroEstructuraActual() {
+    return {
+        estructura: document.getElementById('estructuraTipo')?.value || 'bst',
+        recorrido: document.getElementById('estructuraRecorrido')?.value || 'inorden',
+        saldo_min: document.getElementById('filtroSaldoMin')?.value || '',
+        saldo_max: document.getElementById('filtroSaldoMax')?.value || '',
+        mes: document.getElementById('filtroMesRecibos')?.value || '',
+        estado: currentRecibosView
+    };
+}
+
+function aplicarFiltroEstructuraEnUI(filtro) {
+    const estructura = document.getElementById('estructuraTipo');
+    const recorrido = document.getElementById('estructuraRecorrido');
+    const saldoMin = document.getElementById('filtroSaldoMin');
+    const saldoMax = document.getElementById('filtroSaldoMax');
+    const mes = document.getElementById('filtroMesRecibos');
+    if (estructura) estructura.value = filtro.estructura || 'bst';
+    if (recorrido) recorrido.value = filtro.recorrido || 'inorden';
+    if (saldoMin) saldoMin.value = filtro.saldo_min || '';
+    if (saldoMax) saldoMax.value = filtro.saldo_max || '';
+    if (mes) mes.value = filtro.mes || '';
+    currentMesFilter = filtro.mes || '';
+    if (filtro.estado) {
+        currentRecibosView = filtro.estado;
+        actualizarBotonesRecibos();
+    }
 }
 
 async function cargarDashboard() {
@@ -499,6 +545,7 @@ async function generarRecibos() {
     alert(`Se generaron ${data.generados} recibos exitosamente`);
     await cargarRecibos();
     await cargarRecibos(currentRecibosView);
+    await cargarTopMorosos();
     actualizarDashboard();
 }
 
@@ -525,6 +572,7 @@ async function recalcularRecibos() {
     alert(`Se recalcularon ${data.actualizados} recibos`);
     await cargarRecibos();
     await cargarRecibos(currentRecibosView);
+    await cargarTopMorosos();
     actualizarDashboard();
 }
 
@@ -605,12 +653,14 @@ async function eliminarRecibo(id) {
     alert('Recibo eliminado');
     await cargarRecibos();
     await cargarRecibos(currentRecibosView);
+    await cargarTopMorosos();
     actualizarDashboard();
 }
 
 function setRecibosVista(vista) {
     currentRecibosView = vista;
     cargarRecibos(vista);
+    cargarTopMorosos();
     actualizarBotonesRecibos();
 }
 
@@ -618,6 +668,7 @@ function setFiltroMesRecibos() {
     const input = document.getElementById('filtroMesRecibos');
     currentMesFilter = input && input.value ? input.value : '';
     cargarRecibos(currentRecibosView);
+    cargarTopMorosos();
 }
 
 function limpiarFiltroMesRecibos() {
@@ -625,6 +676,7 @@ function limpiarFiltroMesRecibos() {
     if (input) input.value = '';
     currentMesFilter = '';
     cargarRecibos(currentRecibosView);
+    cargarTopMorosos();
 }
 
 function actualizarResumenMensual(items) {
@@ -645,6 +697,112 @@ function actualizarResumenMensual(items) {
             <td>${formatCurrency(row.pagado)}</td>
             <td>${formatCurrency(row.pendiente)}</td>
             <td>${row.cantidad}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+async function buscarConEstructura() {
+    const filtro = obtenerFiltroEstructuraActual();
+    const endpoint = filtro.estructura === 'avl'
+        ? '/recibos/estructura/avl'
+        : '/recibos/estructura/bst';
+    const params = new URLSearchParams();
+    if (filtro.recorrido) params.set('recorrido', filtro.recorrido);
+    if (filtro.saldo_min !== '') params.set('saldo_min', filtro.saldo_min);
+    if (filtro.saldo_max !== '') params.set('saldo_max', filtro.saldo_max);
+    if (filtro.mes) params.set('mes', filtro.mes);
+    if (filtro.estado) params.set('estado', filtro.estado);
+
+    const { response, data } = await apiFetch(`${endpoint}?${params.toString()}`);
+    if (!response.ok) {
+        mostrarMensaje('mensajeEstructuras', data.error || 'No se pudo consultar la estructura', 'error');
+        return;
+    }
+
+    renderTablaEstructura(data.items || []);
+    mostrarMensaje(
+        'mensajeEstructuras',
+        `Consulta ${String(data.estructura || '').toUpperCase()} completada (${data.total || 0} resultados)`,
+        'success'
+    );
+}
+
+function guardarFiltroEstructura() {
+    const filtro = obtenerFiltroEstructuraActual();
+    pilaFiltrosEstructura.push(filtro);
+    mostrarMensaje(
+        'mensajeEstructuras',
+        `Filtro guardado en pila. Total en pila: ${pilaFiltrosEstructura.size()}`,
+        'success'
+    );
+}
+
+async function deshacerFiltroEstructura() {
+    if (pilaFiltrosEstructura.size() === 0) {
+        mostrarMensaje('mensajeEstructuras', 'La pila de filtros esta vacia', 'error');
+        return;
+    }
+    const filtro = pilaFiltrosEstructura.pop();
+    aplicarFiltroEstructuraEnUI(filtro);
+    await cargarRecibos(currentRecibosView);
+    await buscarConEstructura();
+}
+
+function renderTablaEstructura(items) {
+    const tbody = document.getElementById('tablaEstructuraRecibos');
+    if (!tbody) return;
+    if (!items || items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Sin resultados</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = '';
+    items.forEach(item => {
+        const estadoHtml = item.pagado
+            ? '<span style="color: green;">Pagado</span>'
+            : '<span style="color: #b45309;">Pendiente</span>';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${item.id}</td>
+            <td>${item.propietario.nombre} ${item.propietario.apellido}</td>
+            <td>${item.nro_departamento} - ${item.torre}</td>
+            <td>${formatCurrency(item.saldo)}</td>
+            <td>${formatDate(item.fecha_emision)}</td>
+            <td>${estadoHtml}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+async function cargarTopMorosos() {
+    const mes = document.getElementById('filtroMesRecibos')?.value || '';
+    const params = new URLSearchParams();
+    if (mes) params.set('mes', mes);
+    params.set('limit', '5');
+    const query = params.toString();
+    const { response, data } = await apiFetch(`/recibos/morosos/prioridad?${query}`);
+    const tbody = document.getElementById('tablaTopMorosos');
+    if (!tbody) return;
+
+    if (!response.ok) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No se pudo cargar el ranking</td></tr>';
+        return;
+    }
+    if (!data.items || data.items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Sin morosos pendientes</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = '';
+    data.items.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${item.recibo_id}</td>
+            <td>${item.propietario.nombre} ${item.propietario.apellido}</td>
+            <td>${item.nro_departamento} - ${item.torre}</td>
+            <td>${formatCurrency(item.saldo)}</td>
+            <td>${item.dias_pendiente}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -714,4 +872,6 @@ window.addEventListener('DOMContentLoaded', function() {
     }
     cargarDashboard();
     setRecibosVista('pendientes');
+    cargarTopMorosos();
+    buscarConEstructura();
 });

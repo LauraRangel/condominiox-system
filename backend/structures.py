@@ -111,3 +111,259 @@ class MatrizRecibos:
                         result.append(recibo)
         return result
 
+
+class NodoBST:
+    def __init__(self, key, value):
+        self.key = key
+        self.value = value
+        self.left = None
+        self.right = None
+
+
+class ArbolRecibosBST:
+    def __init__(self):
+        self.root = None
+        self.size = 0
+
+    def insertar(self, key, value):
+        if self.root is None:
+            self.root = NodoBST(key, value)
+            self.size += 1
+            return
+
+        curr = self.root
+        while True:
+            if key < curr.key:
+                if curr.left is None:
+                    curr.left = NodoBST(key, value)
+                    self.size += 1
+                    return
+                curr = curr.left
+            else:
+                if curr.right is None:
+                    curr.right = NodoBST(key, value)
+                    self.size += 1
+                    return
+                curr = curr.right
+
+    def _inorden(self, node, out):
+        if not node:
+            return
+        self._inorden(node.left, out)
+        out.append(node.value)
+        self._inorden(node.right, out)
+
+    def _preorden(self, node, out):
+        if not node:
+            return
+        out.append(node.value)
+        self._preorden(node.left, out)
+        self._preorden(node.right, out)
+
+    def _postorden(self, node, out):
+        if not node:
+            return
+        self._postorden(node.left, out)
+        self._postorden(node.right, out)
+        out.append(node.value)
+
+    def recorrer(self, tipo="inorden"):
+        out = []
+        if tipo == "preorden":
+            self._preorden(self.root, out)
+        elif tipo == "postorden":
+            self._postorden(self.root, out)
+        else:
+            self._inorden(self.root, out)
+        return out
+
+    def _rango(self, node, min_key, max_key, out):
+        if not node:
+            return
+        if node.key >= min_key:
+            self._rango(node.left, min_key, max_key, out)
+        if min_key <= node.key <= max_key:
+            out.append(node.value)
+        if node.key <= max_key:
+            self._rango(node.right, min_key, max_key, out)
+
+    def rango(self, min_key, max_key):
+        out = []
+        self._rango(self.root, min_key, max_key, out)
+        return out
+
+
+class NodoAVL:
+    def __init__(self, key, value):
+        self.key = key
+        self.value = value
+        self.left = None
+        self.right = None
+        self.height = 1
+
+
+class ArbolRecibosAVL:
+    def __init__(self):
+        self.root = None
+        self.size = 0
+
+    def _height(self, node):
+        return node.height if node else 0
+
+    def _update_height(self, node):
+        node.height = 1 + max(self._height(node.left), self._height(node.right))
+
+    def _balance_factor(self, node):
+        return self._height(node.left) - self._height(node.right)
+
+    def _rotate_right(self, y):
+        x = y.left
+        t2 = x.right
+        x.right = y
+        y.left = t2
+        self._update_height(y)
+        self._update_height(x)
+        return x
+
+    def _rotate_left(self, x):
+        y = x.right
+        t2 = y.left
+        y.left = x
+        x.right = t2
+        self._update_height(x)
+        self._update_height(y)
+        return y
+
+    def _insert(self, node, key, value):
+        if node is None:
+            self.size += 1
+            return NodoAVL(key, value)
+
+        if key < node.key:
+            node.left = self._insert(node.left, key, value)
+        else:
+            node.right = self._insert(node.right, key, value)
+
+        self._update_height(node)
+        balance = self._balance_factor(node)
+
+        if balance > 1 and key < node.left.key:
+            return self._rotate_right(node)
+        if balance < -1 and key > node.right.key:
+            return self._rotate_left(node)
+        if balance > 1 and key > node.left.key:
+            node.left = self._rotate_left(node.left)
+            return self._rotate_right(node)
+        if balance < -1 and key < node.right.key:
+            node.right = self._rotate_right(node.right)
+            return self._rotate_left(node)
+
+        return node
+
+    def insertar(self, key, value):
+        self.root = self._insert(self.root, key, value)
+
+    def _inorden(self, node, out):
+        if not node:
+            return
+        self._inorden(node.left, out)
+        out.append(node.value)
+        self._inorden(node.right, out)
+
+    def _preorden(self, node, out):
+        if not node:
+            return
+        out.append(node.value)
+        self._preorden(node.left, out)
+        self._preorden(node.right, out)
+
+    def _postorden(self, node, out):
+        if not node:
+            return
+        self._postorden(node.left, out)
+        self._postorden(node.right, out)
+        out.append(node.value)
+
+    def recorrer(self, tipo="inorden"):
+        out = []
+        if tipo == "preorden":
+            self._preorden(self.root, out)
+        elif tipo == "postorden":
+            self._postorden(self.root, out)
+        else:
+            self._inorden(self.root, out)
+        return out
+
+    def _rango(self, node, min_key, max_key, out):
+        if not node:
+            return
+        if node.key >= min_key:
+            self._rango(node.left, min_key, max_key, out)
+        if min_key <= node.key <= max_key:
+            out.append(node.value)
+        if node.key <= max_key:
+            self._rango(node.right, min_key, max_key, out)
+
+    def rango(self, min_key, max_key):
+        out = []
+        self._rango(self.root, min_key, max_key, out)
+        return out
+
+
+class ColaPrioridadMorosos:
+    def __init__(self):
+        self.heap = []
+
+    def _priority(self, item):
+        # Mayor saldo y mayor antiguedad primero.
+        return item["saldo"], item["dias_pendiente"]
+
+    def _swap(self, i, j):
+        self.heap[i], self.heap[j] = self.heap[j], self.heap[i]
+
+    def _heapify_up(self, idx):
+        while idx > 0:
+            parent = (idx - 1) // 2
+            if self._priority(self.heap[idx]) <= self._priority(self.heap[parent]):
+                break
+            self._swap(idx, parent)
+            idx = parent
+
+    def _heapify_down(self, idx):
+        n = len(self.heap)
+        while True:
+            left = 2 * idx + 1
+            right = 2 * idx + 2
+            largest = idx
+
+            if left < n and self._priority(self.heap[left]) > self._priority(self.heap[largest]):
+                largest = left
+            if right < n and self._priority(self.heap[right]) > self._priority(self.heap[largest]):
+                largest = right
+            if largest == idx:
+                break
+            self._swap(idx, largest)
+            idx = largest
+
+    def enqueue(self, item):
+        self.heap.append(item)
+        self._heapify_up(len(self.heap) - 1)
+
+    def dequeue(self):
+        if not self.heap:
+            return None
+        if len(self.heap) == 1:
+            return self.heap.pop()
+
+        top = self.heap[0]
+        self.heap[0] = self.heap.pop()
+        self._heapify_down(0)
+        return top
+
+    def to_sorted_list(self, limit=None):
+        backup = list(self.heap)
+        out = []
+        while self.heap and (limit is None or len(out) < limit):
+            out.append(self.dequeue())
+        self.heap = backup
+        return out

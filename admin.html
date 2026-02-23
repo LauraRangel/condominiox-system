@@ -413,6 +413,79 @@
                     </div>
                 </div>
 
+                <div class="form-card" style="margin-bottom: 1rem;">
+                    <div class="form-card-header">
+                        <h3>Estructuras de Datos en Pagos</h3>
+                    </div>
+                    <div class="panel-form">
+                        <div class="recibos-inline-group">
+                            <label for="estructuraTipo">Estructura</label>
+                            <select id="estructuraTipo" class="input-inline">
+                                <option value="bst">Arbol Binario (BST)</option>
+                                <option value="avl">Arbol AVL</option>
+                            </select>
+                            <label for="estructuraRecorrido">Recorrido</label>
+                            <select id="estructuraRecorrido" class="input-inline">
+                                <option value="inorden">Inorden</option>
+                                <option value="preorden">Preorden</option>
+                                <option value="postorden">Postorden</option>
+                            </select>
+                        </div>
+                        <div class="recibos-inline-group">
+                            <label for="filtroSaldoMin">Saldo minimo</label>
+                            <input type="number" id="filtroSaldoMin" class="input-inline" min="0" step="0.01" placeholder="0.00">
+                            <label for="filtroSaldoMax">Saldo maximo</label>
+                            <input type="number" id="filtroSaldoMax" class="input-inline" min="0" step="0.01" placeholder="9999.99">
+                        </div>
+                        <div class="recibos-inline-group">
+                            <button class="btn btn-primary" onclick="buscarConEstructura()">Buscar con estructura</button>
+                            <button class="btn btn-secondary" onclick="guardarFiltroEstructura()">Guardar filtro (Pila)</button>
+                            <button class="btn btn-warning" onclick="deshacerFiltroEstructura()">Deshacer filtro</button>
+                        </div>
+                        <div id="mensajeEstructuras" class="mensaje"></div>
+                    </div>
+                    <div class="data-table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Recibo</th>
+                                    <th>Propietario</th>
+                                    <th>Depto.</th>
+                                    <th>Saldo</th>
+                                    <th>Emision</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaEstructuraRecibos">
+                                <tr>
+                                    <td colspan="6" class="empty-state">Sin consulta estructurada</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="data-table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th colspan="5">Cola de Prioridad de Morosos (Top)</th>
+                                </tr>
+                                <tr>
+                                    <th>Recibo</th>
+                                    <th>Propietario</th>
+                                    <th>Depto.</th>
+                                    <th>Saldo</th>
+                                    <th>Dias pendiente</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaTopMorosos">
+                                <tr>
+                                    <td colspan="5" class="empty-state">Sin datos</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <div class="data-table-container">
                     <table class="data-table">
                         <thead>
