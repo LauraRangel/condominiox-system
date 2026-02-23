@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Panel de Administrador - CondominioX">
     <title>Panel Administrador - CondominioX</title>
-    <link rel="stylesheet" href="css/styles.css?v=20260301">
+    <link rel="stylesheet" href="css/styles.css?v=20260304">
 </head>
 <body>
     <div class="app-container">
@@ -264,6 +264,23 @@
                     </button>
                 </div>
 
+                <div class="recibos-control-card" style="margin-bottom: 1rem;">
+                    <div class="recibos-search-title">Filtrar Gastos</div>
+                    <div class="recibos-search-hint">Filtra por mes y categoría.</div>
+                    <div class="recibos-inline-group">
+                        <label for="filtroGastoMes">Mes</label>
+                        <input type="month" id="filtroGastoMes" class="input-inline" onchange="setFiltroGastos()">
+                        <label for="filtroGastoTipo">Categoría</label>
+                        <select id="filtroGastoTipo" class="input-inline" onchange="setFiltroGastos()">
+                            <option value="">Todas</option>
+                            <option value="mantenimiento">Mantenimiento</option>
+                            <option value="luz">Luz</option>
+                            <option value="agua">Agua</option>
+                        </select>
+                        <button class="btn btn-secondary" type="button" onclick="limpiarFiltroGastos()">Limpiar</button>
+                    </div>
+                </div>
+
                 <!-- Formulario Gasto Mantenimiento -->
                 <div id="formAgregarGasto" class="form-card hidden">
                     <div class="form-card-header">
@@ -355,13 +372,16 @@
                                 <th>Concepto</th>
                                 <th>Tipo</th>
                                 <th>Monto</th>
+                                <th>Pagado</th>
+                                <th>Saldo</th>
+                                <th>Estado</th>
                                 <th>Fecha</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="tablaGastos">
                             <tr>
-                                <td colspan="7" class="empty-state">No hay gastos registrados</td>
+                                <td colspan="10" class="empty-state">No hay gastos registrados</td>
                             </tr>
                         </tbody>
                     </table>
@@ -373,30 +393,6 @@
                 <div class="section-header">
                     <h2>Gestión de Recibos</h2>
                     <p>Genera y administra los recibos de mantenimiento</p>
-                </div>
-
-                <div class="form-card" style="margin-bottom: 1rem;">
-                    <div class="form-card-header">
-                        <h3>Resumen por Mes</h3>
-                    </div>
-                    <div class="data-table-container">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Mes</th>
-                                    <th>Total Emitido</th>
-                                    <th>Total Pagado</th>
-                                    <th>Saldo Pendiente</th>
-                                    <th>Recibos</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tablaResumenMensual">
-                                <tr>
-                                    <td colspan="5" class="empty-state">Sin datos</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
                 </div>
 
                 <div class="recibos-controls-grid">
@@ -446,32 +442,12 @@
 
                 <div class="form-card" style="margin-bottom: 1rem;">
                     <div class="form-card-header">
-                        <h3>Estructuras de Datos en Pagos</h3>
+                        <h3>Búsqueda por Deuda (AVL)</h3>
                     </div>
                     <div class="panel-form">
                         <p class="estructura-helper">
-                            Usa estos filtros para encontrar recibos por deuda de forma simple.
+                            Encuentra recibos por rango de saldo. Motor interno: AVL con recorrido inorden.
                         </p>
-                        <div class="recibos-inline-group">
-                            <button class="btn btn-secondary btn-sm" type="button" onclick="toggleOpcionesTecnicas()">
-                                Opciones avanzadas (curso)
-                            </button>
-                        </div>
-                        <div id="bloqueOpcionesTecnicas" class="hidden">
-                        <div class="recibos-inline-group">
-                            <label for="estructuraTipo">Motor interno</label>
-                            <select id="estructuraTipo" class="input-inline">
-                                <option value="bst">Motor estandar</option>
-                                <option value="avl">Motor optimizado</option>
-                            </select>
-                            <label for="estructuraRecorrido">Vista interna</label>
-                            <select id="estructuraRecorrido" class="input-inline">
-                                <option value="inorden">Vista A (recomendada)</option>
-                                <option value="preorden">Vista B</option>
-                                <option value="postorden">Vista C</option>
-                            </select>
-                        </div>
-                        </div>
                         <div class="recibos-inline-group">
                             <label for="filtroSaldoMin">Saldo minimo</label>
                             <input type="number" id="filtroSaldoMin" class="input-inline" min="0" step="0.01" placeholder="0.00">
@@ -487,14 +463,12 @@
                         </div>
                         <div class="recibos-inline-group">
                             <button class="btn btn-primary" onclick="buscarConEstructura()">Buscar con estructura</button>
-                            <button class="btn btn-secondary" onclick="guardarFiltroEstructura()">Guardar filtro (Pila)</button>
-                            <button class="btn btn-warning" onclick="deshacerFiltroEstructura()">Deshacer filtro</button>
                             <button class="btn btn-secondary" onclick="limpiarFiltroEstructura()">Limpiar filtros</button>
                         </div>
                         <div id="mensajeEstructuras" class="mensaje"></div>
                     </div>
-                    <div class="data-table-container">
-                        <div class="tabla-caption">Resultados de búsqueda estructurada (BST/AVL)</div>
+                    <div id="contenedorTablaEstructura" class="data-table-container hidden">
+                        <div class="tabla-caption">Resultados de búsqueda estructurada (AVL)</div>
                         <table class="data-table">
                             <thead>
                                 <tr>
@@ -514,7 +488,7 @@
                         </table>
                     </div>
                     <div class="data-table-container">
-                        <div class="tabla-caption">Ranking de prioridad de cobro (cola de prioridad)</div>
+                        <div class="tabla-caption">Top morosos (automático)</div>
                         <table class="data-table">
                             <thead>
                                 <tr>
@@ -559,6 +533,30 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+
+                <div class="form-card" style="margin-top: 1rem;">
+                    <div class="form-card-header">
+                        <h3>Resumen por Mes</h3>
+                    </div>
+                    <div class="data-table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Mes</th>
+                                    <th>Total Emitido</th>
+                                    <th>Total Pagado</th>
+                                    <th>Saldo Pendiente</th>
+                                    <th>Recibos</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaResumenMensual">
+                                <tr>
+                                    <td colspan="5" class="empty-state">Sin datos</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </section>
 
@@ -617,9 +615,9 @@
         </div>
     </div>
 
-    <script src="js/config.js?v=20260301"></script>
-    <script src="js/auth.js?v=20260301"></script>
-    <script src="js/admin.js?v=20260301"></script>
+    <script src="js/config.js?v=20260304"></script>
+    <script src="js/auth.js?v=20260304"></script>
+    <script src="js/admin.js?v=20260304"></script>
     <script>
         // Override mostrarSeccion para el nuevo diseño
         function mostrarSeccion(seccionId, btn) {

@@ -28,6 +28,13 @@ CREATE TABLE IF NOT EXISTS gastos (
     fecha_registro DATE NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS pagos_gastos (
+    id SERIAL PRIMARY KEY,
+    gasto_id INTEGER NOT NULL REFERENCES gastos(id) ON DELETE CASCADE,
+    monto NUMERIC(10,2) NOT NULL CHECK (monto > 0),
+    fecha_pago DATE NOT NULL DEFAULT CURRENT_DATE
+);
+
 CREATE TABLE IF NOT EXISTS configuracion (
     id SERIAL PRIMARY KEY,
     monto_administracion NUMERIC(10,2) NOT NULL

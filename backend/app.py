@@ -23,6 +23,23 @@ app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 
+def _ensure_extra_tables():
+    # Soporta despliegues donde la tabla de pagos de gastos aún no existe.
+    execute(
+        """
+        CREATE TABLE IF NOT EXISTS pagos_gastos (
+            id SERIAL PRIMARY KEY,
+            gasto_id INTEGER NOT NULL REFERENCES gastos(id) ON DELETE CASCADE,
+            monto NUMERIC(10,2) NOT NULL CHECK (monto > 0),
+            fecha_pago DATE NOT NULL DEFAULT CURRENT_DATE
+        )
+        """
+    )
+
+
+_ensure_extra_tables()
+
+
 def _jwt_secret():
     secret = os.getenv("JWT_SECRET")
     if not secret:
@@ -597,11 +614,26 @@ def listar_gastos():
 
     rows = fetch_all(
         """
-        SELECT id, proveedor, concepto, monto, tipo, fecha_registro
-        FROM gastos
-        ORDER BY fecha_registro DESC, id DESC
+        SELECT
+            g.id,
+            g.proveedor,
+            g.concepto,
+            g.monto,
+            g.tipo,
+            g.fecha_registro,
+            COALESCE(SUM(pg.monto), 0) AS monto_pagado
+        FROM gastos g
+        LEFT JOIN pagos_gastos pg ON pg.gasto_id = g.id
+        GROUP BY g.id, g.proveedor, g.concepto, g.monto, g.tipo, g.fecha_registro
+        ORDER BY g.fecha_registro DESC, g.id DESC
         """
     )
+    for row in rows:
+        total = float(row["monto"] or 0)
+        pagado = float(row.get("monto_pagado") or 0)
+        saldo = max(total - pagado, 0)
+        row["saldo"] = saldo
+        row["pagado_gasto"] = saldo <= 0
     return jsonify({"items": rows})
 
 
@@ -661,6 +693,56 @@ def crear_gasto():
     return jsonify(row), 201
 
 
+@app.post("/api/gastos/<int:gasto_id>/pagar")
+def pagar_gasto(gasto_id):
+    payload, err = _get_payload()
+    if err:
+        return jsonify({"error": err[0]}), err[1]
+    role_err = _require_roles(payload, "Administrador")
+    if role_err:
+        return jsonify({"error": role_err[0]}), role_err[1]
+
+    body = request.get_json(silent=True) or {}
+    monto = body.get("monto")
+    if monto is None:
+        return jsonify({"error": "Monto requerido"}), 400
+    try:
+        monto = float(monto)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Monto inválido"}), 400
+    if monto <= 0:
+        return jsonify({"error": "El monto debe ser mayor a cero"}), 400
+
+    gasto = fetch_one(
+        """
+        SELECT g.id, g.monto, COALESCE(SUM(pg.monto), 0) AS monto_pagado
+        FROM gastos g
+        LEFT JOIN pagos_gastos pg ON pg.gasto_id = g.id
+        WHERE g.id = %s
+        GROUP BY g.id, g.monto
+        """,
+        [gasto_id],
+    )
+    if not gasto:
+        return jsonify({"error": "Gasto no encontrado"}), 404
+
+    total = float(gasto["monto"] or 0)
+    pagado = float(gasto.get("monto_pagado") or 0)
+    saldo = total - pagado
+    if monto > saldo:
+        return jsonify({"error": f"El monto excede el saldo del gasto ({saldo:.2f})"}), 400
+
+    row = execute_returning(
+        """
+        INSERT INTO pagos_gastos (gasto_id, monto, fecha_pago)
+        VALUES (%s, %s, CURRENT_DATE)
+        RETURNING id, gasto_id, monto, fecha_pago
+        """,
+        [gasto_id, monto],
+    )
+    return jsonify(row), 201
+
+
 def _recibo_total(recibo):
     return (
         recibo["monto_administracion"]
@@ -672,6 +754,51 @@ def _recibo_total(recibo):
 
 def _recibo_saldo(recibo):
     return _recibo_total(recibo) - (recibo.get("monto_pagado") or 0)
+
+
+def _aplicar_pago_a_gastos_del_mes(monto, fecha_emision):
+    # Distribuye pagos de recibos a gastos del mismo mes (FIFO por fecha/id).
+    mes = str(fecha_emision)[:7]
+    remaining = float(monto)
+    applied = 0.0
+    if remaining <= 0:
+        return applied, remaining
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT g.id, g.monto, g.fecha_registro, COALESCE(SUM(pg.monto), 0) AS monto_pagado
+                FROM gastos g
+                LEFT JOIN pagos_gastos pg ON pg.gasto_id = g.id
+                WHERE TO_CHAR(g.fecha_registro, 'YYYY-MM') = %s
+                GROUP BY g.id, g.monto, g.fecha_registro
+                HAVING (g.monto - COALESCE(SUM(pg.monto), 0)) > 0
+                ORDER BY g.fecha_registro ASC, g.id ASC
+                """,
+                [mes],
+            )
+            gastos = cur.fetchall()
+
+            for gasto in gastos:
+                if remaining <= 0:
+                    break
+                saldo_gasto = float(gasto["monto"]) - float(gasto["monto_pagado"] or 0)
+                if saldo_gasto <= 0:
+                    continue
+                aplicar = min(remaining, saldo_gasto)
+                cur.execute(
+                    """
+                    INSERT INTO pagos_gastos (gasto_id, monto, fecha_pago)
+                    VALUES (%s, %s, CURRENT_DATE)
+                    """,
+                    [gasto["id"], aplicar],
+                )
+                remaining -= aplicar
+                applied += aplicar
+        conn.commit()
+
+    return round(applied, 2), round(remaining, 2)
 
 
 @app.post("/api/recibos/generar")
@@ -1083,7 +1210,7 @@ def pagar_recibo(recibo_id):
                 ELSE NULL
             END
         WHERE id = %s
-        RETURNING id, monto_pagado, pagado, fecha_pago,
+        RETURNING id, monto_pagado, pagado, fecha_emision, fecha_pago,
                   monto_administracion, monto_agua, monto_luz, monto_mantenimiento
         """,
         [monto, monto, monto, recibo_id],
@@ -1098,10 +1225,25 @@ def pagar_recibo(recibo_id):
         "monto_luz": row["monto_luz"],
         "monto_mantenimiento": row["monto_mantenimiento"],
         "pagado": row["pagado"],
+        "fecha_emision": row["fecha_emision"].isoformat() if row["fecha_emision"] else None,
         "fecha_pago": row["fecha_pago"].isoformat() if row["fecha_pago"] else None,
     }
+    aplicado_gastos = 0.0
+    saldo_no_aplicado = 0.0
+    try:
+        aplicado_gastos, saldo_no_aplicado = _aplicar_pago_a_gastos_del_mes(
+            monto,
+            recibo["fecha_emision"],
+        )
+    except Exception:
+        # No bloquea el pago del recibo si falla el asiento de gastos.
+        aplicado_gastos = 0.0
+        saldo_no_aplicado = round(float(monto), 2)
+
     recibo["total"] = _recibo_total(recibo)
     recibo["saldo"] = _recibo_saldo(recibo)
+    recibo["aplicado_gastos"] = aplicado_gastos
+    recibo["saldo_no_aplicado_gastos"] = saldo_no_aplicado
     return jsonify(recibo)
 
 

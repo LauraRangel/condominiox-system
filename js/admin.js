@@ -9,6 +9,10 @@ let filtroPropietarioTexto = '';
 let filtroPropietarioTorre = '';
 let filtroPropietarioPiso = '';
 let filtroPropietarioTimer = null;
+let busquedaEstructuraRealizada = false;
+let filtroGastoMes = '';
+let filtroGastoTipo = '';
+let indiceGastos = null;
 
 class PilaFiltros {
     constructor() {
@@ -26,6 +30,45 @@ class PilaFiltros {
 }
 
 const pilaFiltrosEstructura = new PilaFiltros();
+
+class IndiceGastos {
+    constructor(items = []) {
+        this.byMes = new Map();
+        this.byTipo = new Map();
+        this.byMesTipo = new Map();
+        items.forEach((g) => this.add(g));
+    }
+
+    add(gasto) {
+        const mes = String(gasto.fecha_registro || '').slice(0, 7);
+        const tipo = gasto.tipo || '';
+
+        if (!this.byMes.has(mes)) this.byMes.set(mes, []);
+        this.byMes.get(mes).push(gasto);
+
+        if (!this.byTipo.has(tipo)) this.byTipo.set(tipo, []);
+        this.byTipo.get(tipo).push(gasto);
+
+        const key = `${mes}|${tipo}`;
+        if (!this.byMesTipo.has(key)) this.byMesTipo.set(key, []);
+        this.byMesTipo.get(key).push(gasto);
+    }
+
+    query(mes = '', tipo = '') {
+        if (mes && tipo) {
+            return this.byMesTipo.get(`${mes}|${tipo}`) || [];
+        }
+        if (mes) {
+            return this.byMes.get(mes) || [];
+        }
+        if (tipo) {
+            return this.byTipo.get(tipo) || [];
+        }
+        const all = [];
+        this.byMes.forEach((arr) => all.push(...arr));
+        return all;
+    }
+}
 
 function toNumber(value) {
     if (typeof value === 'number') return value;
@@ -107,8 +150,8 @@ function actualizarDashboard() {
 
 function obtenerFiltroEstructuraActual() {
     return {
-        estructura: document.getElementById('estructuraTipo')?.value || 'bst',
-        recorrido: document.getElementById('estructuraRecorrido')?.value || 'inorden',
+        estructura: 'avl',
+        recorrido: 'inorden',
         saldo_min: document.getElementById('filtroSaldoMin')?.value || '',
         saldo_max: document.getElementById('filtroSaldoMax')?.value || '',
         mes: document.getElementById('filtroMesRecibos')?.value || '',
@@ -116,20 +159,10 @@ function obtenerFiltroEstructuraActual() {
     };
 }
 
-function toggleOpcionesTecnicas() {
-    const bloque = document.getElementById('bloqueOpcionesTecnicas');
-    if (!bloque) return;
-    bloque.classList.toggle('hidden');
-}
-
 function aplicarFiltroEstructuraEnUI(filtro) {
-    const estructura = document.getElementById('estructuraTipo');
-    const recorrido = document.getElementById('estructuraRecorrido');
     const saldoMin = document.getElementById('filtroSaldoMin');
     const saldoMax = document.getElementById('filtroSaldoMax');
     const mes = document.getElementById('filtroMesRecibos');
-    if (estructura) estructura.value = filtro.estructura || 'bst';
-    if (recorrido) recorrido.value = filtro.recorrido || 'inorden';
     if (saldoMin) saldoMin.value = filtro.saldo_min || '';
     if (saldoMax) saldoMax.value = filtro.saldo_max || '';
     if (mes) mes.value = filtro.mes || '';
@@ -386,6 +419,7 @@ async function cargarGastos() {
         return;
     }
     gastos = data.items || [];
+    indiceGastos = new IndiceGastos(gastos);
     listarGastos();
 }
 
@@ -524,16 +558,29 @@ if (document.getElementById('formGastoAgua')) {
 
 function listarGastos() {
     const tbody = document.getElementById('tablaGastos');
+    const items = indiceGastos
+        ? indiceGastos.query(filtroGastoMes, filtroGastoTipo)
+        : gastos;
 
-    if (gastos.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No hay gastos registrados</td></tr>';
+    if (items.length === 0) {
+        const mensaje = gastos.length === 0
+            ? 'No hay gastos registrados'
+            : 'No hay gastos con ese filtro';
+        tbody.innerHTML = `<tr><td colspan="10" class="empty-state">${mensaje}</td></tr>`;
         return;
     }
 
     tbody.innerHTML = '';
     let total = 0;
-    gastos.forEach(gasto => {
+    let totalPagado = 0;
+    let totalSaldo = 0;
+    items.forEach(gasto => {
         total += toNumber(gasto.monto);
+        totalPagado += toNumber(gasto.monto_pagado);
+        totalSaldo += toNumber(gasto.saldo);
+        const estado = gasto.pagado_gasto
+            ? '<span style="color: green;">Pagado</span>'
+            : '<span style="color: #b45309;">Pendiente</span>';
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${gasto.id}</td>
@@ -541,8 +588,12 @@ function listarGastos() {
             <td>${gasto.concepto}</td>
             <td><span style="background: var(--accent-gold); color: white; padding: 0.2rem 0.5rem; border-radius: 3px;">${gasto.tipo}</span></td>
             <td>${formatCurrency(gasto.monto)}</td>
+            <td>${formatCurrency(gasto.monto_pagado || 0)}</td>
+            <td>${formatCurrency(gasto.saldo || 0)}</td>
+            <td>${estado}</td>
             <td>${formatDateRaw(gasto.fecha_registro)}</td>
             <td>
+                <button class="btn btn-success btn-sm" onclick="pagarGasto(${gasto.id}, ${toNumber(gasto.saldo || 0)})">Pagar</button>
                 <button class="btn btn-danger btn-sm" onclick="eliminarGasto(${gasto.id})">Eliminar</button>
             </td>
         `;
@@ -554,9 +605,29 @@ function listarGastos() {
     trTotal.innerHTML = `
         <td colspan="4">Total</td>
         <td>${formatCurrency(total)}</td>
-        <td colspan="2"></td>
+        <td>${formatCurrency(totalPagado)}</td>
+        <td>${formatCurrency(totalSaldo)}</td>
+        <td colspan="3"></td>
     `;
     tbody.appendChild(trTotal);
+}
+
+function setFiltroGastos() {
+    const mesInput = document.getElementById('filtroGastoMes');
+    const tipoInput = document.getElementById('filtroGastoTipo');
+    filtroGastoMes = (mesInput?.value || '').trim();
+    filtroGastoTipo = (tipoInput?.value || '').trim();
+    listarGastos();
+}
+
+function limpiarFiltroGastos() {
+    const mesInput = document.getElementById('filtroGastoMes');
+    const tipoInput = document.getElementById('filtroGastoTipo');
+    if (mesInput) mesInput.value = '';
+    if (tipoInput) tipoInput.value = '';
+    filtroGastoMes = '';
+    filtroGastoTipo = '';
+    listarGastos();
 }
 
 async function eliminarGasto(id) {
@@ -576,6 +647,31 @@ async function eliminarGasto(id) {
     alert('Gasto eliminado');
     await cargarGastos();
     actualizarDashboard();
+}
+
+async function pagarGasto(id, saldoActual) {
+    if (saldoActual <= 0) {
+        alert('Este gasto ya está completamente pagado');
+        return;
+    }
+    const montoStr = prompt(`Ingrese el monto a pagar (saldo actual ${saldoActual.toFixed(2)})`);
+    if (!montoStr) return;
+    const monto = parseFloat(montoStr);
+    if (Number.isNaN(monto) || monto <= 0) {
+        alert('Monto inválido');
+        return;
+    }
+
+    const { response, data } = await apiFetch(`/gastos/${id}/pagar`, {
+        method: 'POST',
+        body: JSON.stringify({ monto })
+    });
+    if (!response.ok) {
+        alert(data.error || 'No se pudo registrar el pago del gasto');
+        return;
+    }
+    await cargarGastos();
+    alert('Pago de gasto registrado');
 }
 
 // ========================================
@@ -764,9 +860,7 @@ function actualizarResumenMensual(items) {
 
 async function buscarConEstructura() {
     const filtro = obtenerFiltroEstructuraActual();
-    const endpoint = filtro.estructura === 'avl'
-        ? '/recibos/estructura/avl'
-        : '/recibos/estructura/bst';
+    const endpoint = '/recibos/estructura/avl';
     const params = new URLSearchParams();
     if (filtro.recorrido) params.set('recorrido', filtro.recorrido);
     if (filtro.saldo_min !== '') params.set('saldo_min', filtro.saldo_min);
@@ -780,6 +874,7 @@ async function buscarConEstructura() {
         return;
     }
 
+    busquedaEstructuraRealizada = true;
     renderTablaEstructura(data.items || []);
     mostrarMensaje(
         'mensajeEstructuras',
@@ -818,16 +913,23 @@ function aplicarPresetSaldo(min, max) {
 
 async function limpiarFiltroEstructura() {
     aplicarPresetSaldo('', '');
-    const estructura = document.getElementById('estructuraTipo');
-    const recorrido = document.getElementById('estructuraRecorrido');
-    if (estructura) estructura.value = 'bst';
-    if (recorrido) recorrido.value = 'inorden';
-    await buscarConEstructura();
+    busquedaEstructuraRealizada = false;
+    const contenedor = document.getElementById('contenedorTablaEstructura');
+    if (contenedor) contenedor.classList.add('hidden');
+    const tbody = document.getElementById('tablaEstructuraRecibos');
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Sin consulta aún. Usa "Buscar con estructura".</td></tr>';
+    }
 }
 
 function renderTablaEstructura(items) {
     const tbody = document.getElementById('tablaEstructuraRecibos');
+    const contenedor = document.getElementById('contenedorTablaEstructura');
     if (!tbody) return;
+    if (contenedor) {
+        if (busquedaEstructuraRealizada) contenedor.classList.remove('hidden');
+        else contenedor.classList.add('hidden');
+    }
     if (!items || items.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Sin resultados</td></tr>';
         return;
@@ -949,5 +1051,4 @@ window.addEventListener('DOMContentLoaded', function() {
     cargarDashboard();
     setRecibosVista('pendientes');
     cargarTopMorosos();
-    buscarConEstructura();
 });
