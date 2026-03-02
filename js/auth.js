@@ -185,4 +185,28 @@ function inicializarToggleContrasenas() {
     });
 }
 
+function toggleSidebarMenu() {
+    const sidebar = document.querySelector('.sidebar');
+    if (!sidebar) return;
+    sidebar.classList.toggle('menu-open');
+}
+
+function cerrarSidebarMenuEnMobile() {
+    if (window.innerWidth > 992) return;
+    const sidebar = document.querySelector('.sidebar');
+    if (!sidebar) return;
+    sidebar.classList.remove('menu-open');
+}
+
+window.addEventListener('resize', function() {
+    if (window.innerWidth > 992) {
+        const sidebar = document.querySelector('.sidebar');
+        if (sidebar) sidebar.classList.remove('menu-open');
+    }
+});
+
+document.querySelectorAll('.sidebar-nav .nav-item').forEach((btn) => {
+    btn.addEventListener('click', cerrarSidebarMenuEnMobile);
+});
+
 window.addEventListener('DOMContentLoaded', inicializarToggleContrasenas);
