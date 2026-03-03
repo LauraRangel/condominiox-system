@@ -1,6 +1,6 @@
 import os
 import datetime as dt
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -91,6 +91,25 @@ def _get_monto_administracion():
         value = row["monto_administracion"]
         return float(value)
     return 50.0
+
+
+MONEY_STEP = Decimal("0.01")
+
+
+def _to_decimal(value):
+    if isinstance(value, Decimal):
+        return value
+    if value in (None, ""):
+        return Decimal("0")
+    return Decimal(str(value))
+
+
+def _money(value):
+    return _to_decimal(value).quantize(MONEY_STEP, rounding=ROUND_HALF_UP)
+
+
+def _money_float(value):
+    return float(_money(value))
 
 
 @app.get("/api/health")
@@ -709,8 +728,8 @@ def pagar_gasto(gasto_id):
     if monto is None:
         return jsonify({"error": "Monto requerido"}), 400
     try:
-        monto = float(monto)
-    except (TypeError, ValueError):
+        monto = _money(monto)
+    except (TypeError, ValueError, InvalidOperation):
         return jsonify({"error": "Monto inválido"}), 400
     if monto <= 0:
         return jsonify({"error": "El monto debe ser mayor a cero"}), 400
@@ -728,11 +747,11 @@ def pagar_gasto(gasto_id):
     if not gasto:
         return jsonify({"error": "Gasto no encontrado"}), 404
 
-    total = float(gasto["monto"] or 0)
-    pagado = float(gasto.get("monto_pagado") or 0)
-    saldo = total - pagado
+    total = _money(gasto["monto"] or 0)
+    pagado = _money(gasto.get("monto_pagado") or 0)
+    saldo = _money(total - pagado)
     if monto > saldo:
-        return jsonify({"error": f"El monto excede el saldo del gasto ({saldo:.2f})"}), 400
+        return jsonify({"error": f"El monto excede el saldo del gasto ({float(saldo):.2f})"}), 400
 
     row = execute_returning(
         """
@@ -746,25 +765,31 @@ def pagar_gasto(gasto_id):
 
 
 def _recibo_total(recibo):
-    return (
-        recibo["monto_administracion"]
-        + recibo["monto_agua"]
-        + recibo["monto_luz"]
-        + recibo["monto_mantenimiento"]
+    total = (
+        _to_decimal(recibo.get("monto_administracion"))
+        + _to_decimal(recibo.get("monto_agua"))
+        + _to_decimal(recibo.get("monto_luz"))
+        + _to_decimal(recibo.get("monto_mantenimiento"))
     )
+    return _money_float(total)
 
 
 def _recibo_saldo(recibo):
-    return _recibo_total(recibo) - (recibo.get("monto_pagado") or 0)
+    total = _to_decimal(_recibo_total(recibo))
+    pagado = _to_decimal(recibo.get("monto_pagado") or 0)
+    saldo = total - pagado
+    if saldo < 0:
+        saldo = Decimal("0")
+    return _money_float(saldo)
 
 
 def _aplicar_pago_a_gastos_del_mes(monto, fecha_emision):
     # Distribuye pagos de recibos a gastos del mismo mes (FIFO por fecha/id).
     mes = str(fecha_emision)[:7]
-    remaining = float(monto)
-    applied = 0.0
+    remaining = _money(monto)
+    applied = Decimal("0.00")
     if remaining <= 0:
-        return applied, remaining
+        return float(applied), float(remaining)
 
     with get_db() as conn:
         with conn.cursor() as cur:
@@ -785,7 +810,7 @@ def _aplicar_pago_a_gastos_del_mes(monto, fecha_emision):
             for gasto in gastos:
                 if remaining <= 0:
                     break
-                saldo_gasto = float(gasto["monto"]) - float(gasto["monto_pagado"] or 0)
+                saldo_gasto = _money(_to_decimal(gasto["monto"]) - _to_decimal(gasto["monto_pagado"] or 0))
                 if saldo_gasto <= 0:
                     continue
                 aplicar = min(remaining, saldo_gasto)
@@ -796,11 +821,11 @@ def _aplicar_pago_a_gastos_del_mes(monto, fecha_emision):
                     """,
                     [gasto["id"], aplicar],
                 )
-                remaining -= aplicar
-                applied += aplicar
+                remaining = _money(remaining - aplicar)
+                applied = _money(applied + aplicar)
         conn.commit()
 
-    return round(applied, 2), round(remaining, 2)
+    return float(applied), float(remaining)
 
 
 @app.post("/api/recibos/generar")
@@ -846,10 +871,10 @@ def generar_recibos():
     total_mantenimiento = _sum_por_tipo("mantenimiento")
 
     divisor = Decimal(len(propietarios))
-    monto_administracion = Decimal(str(_get_monto_administracion()))
-    monto_agua = (total_agua / divisor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    monto_luz = (total_luz / divisor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    monto_mantenimiento = (total_mantenimiento / divisor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    monto_administracion = _money(_get_monto_administracion())
+    monto_agua = _money(total_agua / divisor)
+    monto_luz = _money(total_luz / divisor)
+    monto_mantenimiento = _money(total_mantenimiento / divisor)
 
     generados = 0
     recibos = []
@@ -879,9 +904,9 @@ def generar_recibos():
                 prop["id"],
                 monto_administracion,
                 monto_agua,
-                float(monto_luz),
-                float(monto_mantenimiento),
-                0,
+                monto_luz,
+                monto_mantenimiento,
+                Decimal("0.00"),
                 fecha_emision,
             ],
         )
@@ -942,10 +967,10 @@ def recalcular_recibos():
     total_mantenimiento = _sum_por_tipo("mantenimiento")
 
     divisor = Decimal(len(propietarios))
-    monto_administracion = Decimal(str(_get_monto_administracion()))
-    monto_agua = (total_agua / divisor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    monto_luz = (total_luz / divisor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    monto_mantenimiento = (total_mantenimiento / divisor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    monto_administracion = _money(_get_monto_administracion())
+    monto_agua = _money(total_agua / divisor)
+    monto_luz = _money(total_luz / divisor)
+    monto_mantenimiento = _money(total_mantenimiento / divisor)
 
     rows = fetch_all(
         """
@@ -968,18 +993,18 @@ def recalcular_recibos():
                   monto_mantenimiento, monto_pagado, fecha_emision, fecha_pago, pagado
         """,
         [
-            float(monto_administracion),
-            float(monto_agua),
-            float(monto_luz),
-            float(monto_mantenimiento),
-            float(monto_administracion),
-            float(monto_agua),
-            float(monto_luz),
-            float(monto_mantenimiento),
-            float(monto_administracion),
-            float(monto_agua),
-            float(monto_luz),
-            float(monto_mantenimiento),
+            monto_administracion,
+            monto_agua,
+            monto_luz,
+            monto_mantenimiento,
+            monto_administracion,
+            monto_agua,
+            monto_luz,
+            monto_mantenimiento,
+            monto_administracion,
+            monto_agua,
+            monto_luz,
+            monto_mantenimiento,
             mes,
         ],
     )
@@ -1171,8 +1196,8 @@ def pagar_recibo(recibo_id):
     if monto is None:
         return jsonify({"error": "Monto requerido"}), 400
     try:
-        monto = float(monto)
-    except (TypeError, ValueError):
+        monto = _money(monto)
+    except (TypeError, ValueError, InvalidOperation):
         return jsonify({"error": "Monto inválido"}), 400
     if monto <= 0:
         return jsonify({"error": "El monto debe ser mayor a cero"}), 400
@@ -1187,27 +1212,30 @@ def pagar_recibo(recibo_id):
     )
     if not current:
         return jsonify({"error": "Recibo no encontrado"}), 404
-    total_actual = (
-        float(current["monto_administracion"])
-        + float(current["monto_agua"])
-        + float(current["monto_luz"])
-        + float(current["monto_mantenimiento"])
+    total_actual = _to_decimal(
+        current["monto_administracion"]
+    ) + _to_decimal(
+        current["monto_agua"]
+    ) + _to_decimal(
+        current["monto_luz"]
+    ) + _to_decimal(
+        current["monto_mantenimiento"]
     )
-    saldo_actual = total_actual - float(current["monto_pagado"] or 0)
+    saldo_actual = _money(total_actual - _to_decimal(current["monto_pagado"] or 0))
     if monto > saldo_actual:
-        return jsonify({"error": f"El monto excede el saldo pendiente ({saldo_actual:.2f})"}), 400
+        return jsonify({"error": f"El monto excede el saldo pendiente ({float(saldo_actual):.2f})"}), 400
 
     row = execute_returning(
         """
         UPDATE recibos
-        SET monto_pagado = monto_pagado + %s,
+        SET monto_pagado = ROUND(monto_pagado + %s, 2),
             pagado = CASE
-                WHEN (monto_pagado + %s) >= (monto_administracion + monto_agua + monto_luz + monto_mantenimiento)
+                WHEN ROUND(monto_pagado + %s, 2) >= ROUND((monto_administracion + monto_agua + monto_luz + monto_mantenimiento), 2)
                     THEN TRUE
                 ELSE FALSE
             END,
             fecha_pago = CASE
-                WHEN (monto_pagado + %s) >= (monto_administracion + monto_agua + monto_luz + monto_mantenimiento)
+                WHEN ROUND(monto_pagado + %s, 2) >= ROUND((monto_administracion + monto_agua + monto_luz + monto_mantenimiento), 2)
                     THEN CURRENT_DATE
                 ELSE NULL
             END
