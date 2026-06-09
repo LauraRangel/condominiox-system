@@ -1249,11 +1249,12 @@ async function cargarResumenFinanciero() {
 async function exportarMorosidadExcel() {
     const mesInput = document.getElementById('filtroMes');
     const mes = mesInput ? mesInput.value : '';
-    const url = (mes ? `/reportes/morosidad/excel?mes=${mes}` : '/reportes/morosidad/excel');
+    const path = mes ? `/reportes/morosidad/excel?mes=${mes}` : '/reportes/morosidad/excel';
+    const url = `https://condominiox-system.onrender.com/api${path}`;
     const token = localStorage.getItem('token');
 
     try {
-        const response = await fetch(`${window.API_BASE || ''}${url}`, {
+        const response = await fetch(url, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!response.ok) {
