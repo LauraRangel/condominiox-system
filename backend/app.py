@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-from flask import Flask
+from flask import Flask, request, make_response
 from flask_cors import CORS
 
 load_dotenv()
@@ -17,7 +17,6 @@ from routes import (
 )
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # Registrar blueprints (Controllers en MVC)
 app.register_blueprint(health_routes.bp)
@@ -28,6 +27,25 @@ app.register_blueprint(gasto_routes.bp)
 app.register_blueprint(recibo_routes.bp)
 app.register_blueprint(anuncio_routes.bp)
 app.register_blueprint(reporte_routes.bp)
+
+CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    return response
+
+
+@app.route("/api/<path:path>", methods=["OPTIONS"])
+def handle_options(path):
+    resp = make_response("", 204)
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    resp.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    return resp
 
 
 def _ensure_extra_tables():
