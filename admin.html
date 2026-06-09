@@ -485,7 +485,7 @@
                             <button class="btn btn-secondary" onclick="limpiarFiltroMesRecibos()">Limpiar</button>
                         </div>
                         <div class="recibos-inline-group">
-                            <label>Estado de vista</label>
+                            <span class="filter-label">Estado de vista</span>
                             <button class="btn btn-secondary" id="btnRecibosPendientes" onclick="setRecibosVista('pendientes')">
                                 Pendientes
                             </button>
@@ -688,11 +688,11 @@
                     </div>
                     <div style="margin-bottom: 1rem; display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-end;">
                         <div class="form-group" style="margin:0;">
-                            <label>Desde</label>
+                            <label for="estadoCuentaDesde">Desde</label>
                             <input type="month" id="estadoCuentaDesde" class="input-inline" style="max-width:160px;">
                         </div>
                         <div class="form-group" style="margin:0;">
-                            <label>Hasta</label>
+                            <label for="estadoCuentaHasta">Hasta</label>
                             <input type="month" id="estadoCuentaHasta" class="input-inline" style="max-width:160px;">
                         </div>
                         <button class="btn btn-primary btn-sm" onclick="filtrarEstadoCuenta()">Filtrar</button>

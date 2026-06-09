@@ -183,7 +183,7 @@ def get_recibos_estado_cuenta(propietario_id, desde: str = "", hasta: str = ""):
         params.append(hasta)
     return fetch_all(
         f"""
-        SELECT r.id, r.monto_administracion, r.monto_agua, r.monto_luz,
+        SELECT r.id, r.propietario_id, r.monto_administracion, r.monto_agua, r.monto_luz,
                r.monto_mantenimiento, r.monto_pagado, r.fecha_emision, r.fecha_pago, r.pagado,
                p.nombre, p.apellido, p.nro_departamento, p.torre
         FROM recibos r
