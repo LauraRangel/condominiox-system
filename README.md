@@ -1,84 +1,121 @@
-# CondominioX - Guía de Uso
+# CondominioX — Guía de Uso
 
-Sistema web para gestión de condominio con roles (`Administrador` y `Propietario`), pagos parciales y control de gastos.
+Sistema web para gestión de condominio con roles `Administrador` y `Propietario`, autenticación JWT, pagos parciales, comunicados y reportes en Excel.
 
 ## Acceso
+
 1. Abrir `index.html`.
-2. Seleccionar rol.
+2. Seleccionar tipo de usuario.
 3. Ingresar usuario y contraseña.
+
+> La contraseña inicial de cada propietario es su **DNI**.
+
+---
 
 ## Funciones del Administrador
 
 ### Dashboard
-- Ver indicadores: propietarios, recibos pendientes/pagados y gastos totales.
-- Configurar `monto de administración`.
+- Indicadores generales: total de propietarios, recibos pendientes/pagados, gastos del mes.
+- Resumen financiero mensual: total emitido, total cobrado, saldo pendiente, porcentaje de cobranza y desglose por concepto (administración, agua, luz, mantenimiento).
+- Configurar el **monto de administración** mensual.
 
 ### Propietarios
-- Crear propietario (usuario + perfil).
-- Contraseña inicial del propietario: **DNI**.
-- Editar propietario completo (usuario, datos personales y unidad).
+- Crear propietario con usuario y datos personales (nombre, apellido, DNI, depto., torre, correo, teléfono).
+- Editar todos los datos del propietario.
 - Eliminar propietario.
-- Filtros de búsqueda por:
-  - texto (`nombre`, `apellido`, `DNI`, `departamento`)
-  - `torre`
-  - `piso`
-- La búsqueda de propietarios se resuelve en backend con **BST**.
+- Ver **estado de cuenta individual** desde la tabla (modal con recibos filtrados por rango de fechas).
+- Filtros de búsqueda por nombre/apellido/DNI/departamento, torre y piso.
 
 ### Gastos
-- Registrar gastos de `mantenimiento`, `luz` y `agua`.
-- Filtrar gastos por:
-  - `mes`
-  - `categoría`
-  - `estado` (`pendiente` / `pagado`)
-- Control de pagos de gastos:
-  - pago manual por botón `Pagar`
-  - estado y saldo por gasto (`monto`, `pagado`, `saldo`)
+- Registrar gastos de **mantenimiento**, **luz** y **agua** desde un modal con pestañas.
+- Filtrar por mes, categoría y estado (pendiente / pagado).
+- Pagar gastos manualmente.
 - Eliminar gastos.
 
 ### Recibos
-- Generar recibos por fecha.
-- Recalcular recibos por mes.
-- Ver recibos `pendientes/pagados` y filtrar por mes.
-- Búsqueda por deuda con **AVL** (inorden fijo), por rango de saldo.
-- Top morosos automático (cola de prioridad).
-- Resumen mensual al final de la sección.
+- **Generar recibos** para todos los propietarios en una fecha específica.
+- **Recalcular mes**: actualiza montos de un mes ya generado.
+- Ver recibos **pendientes** o **pagados**, filtrados por mes.
+- **Morosos**: lista automática de propietarios con mayor saldo pendiente y días sin pagar.
+- **Exportar Excel**: descarga el reporte de morosos en formato `.xlsx`.
+- Búsqueda avanzada por rango de saldo (desplegable).
+- Resumen mensual al pie de la sección.
+
+### Anuncios
+- Crear anuncios con título, contenido, tipo (informativo / pago / mantenimiento) y fecha de caducidad.
+- Eliminar anuncios.
+- Los anuncios caducados dejan de aparecer en el panel del propietario.
+
+### Mi Perfil
+- Cambiar contraseña con validación de la actual.
+
+---
 
 ## Funciones del Propietario
 
-### Mi información
-- Ver datos personales y unidad.
-- Editar solo `correo` y `teléfono`.
+### Mi Información
+- Ver nombre, DNI, departamento, torre, correo y teléfono.
+- Editar correo y teléfono directamente desde la vista.
+- Indicadores rápidos: recibos pendientes y monto total por pagar.
 
-### Recibos
-- Ver pendientes y pagados.
-- Pagar recibos con pagos parciales.
-- Ver total, pagado y saldo por recibo.
+### Recibos Pendientes
+- Ver todos los recibos sin pagar con desglose (administración, agua, luz, mantenimiento, saldo).
+- **Pagar recibo**: modal con monto ingresable y botón "Pagar total" para pago completo.
 
-### Perfil
-- Cambiar contraseña con validación de contraseña actual.
+### Historial de Pagos
+- Ver recibos pagados con detalle de montos y fecha de pago.
+- Filtrar por mes.
 
-## Reglas de pago actuales
-- Pago de recibo:
-  - actualiza el recibo (pagado/saldo),
-  - y además aplica el monto a gastos pendientes del mismo mes (FIFO).
-- Pago de gasto manual:
-  - reduce el saldo del gasto seleccionado.
+### Comunicados
+- Ver anuncios publicados por el administrador (solo los activos/no caducados).
+- Filtrar por tipo y estado (leído / sin leer).
+- Badge en el menú indica cuántos comunicados no han sido leídos.
 
-## Recuperación de contraseña
-- Flujo por `usuario + DNI + nueva contraseña` en `recuperar.html`.
-
-## Estructuras de datos en uso
-- **BST**: búsqueda de propietarios en backend.
-- **AVL**: búsqueda por deuda de recibos.
-- **Cola de prioridad**: ranking de morosos.
-- **Pila**: historial de filtros en búsqueda estructurada.
-- **Índice hash (`Map`)**: filtros rápidos de gastos por mes/tipo.
-
-## Recomendaciones de despliegue
-- Frontend: GitHub Pages.
-- Backend: Render + PostgreSQL.
-- Si no ves cambios de frontend, forzar recarga (`Ctrl/Cmd + Shift + R`).
+### Mi Perfil
+- Cambiar contraseña.
 
 ---
-**Versión:** 3.0  
-**Fecha:** Marzo 2026
+
+## Reglas de pago
+
+- Un recibo se marca como **pagado** cuando `monto_pagado >= total_recibo`.
+- Los pagos parciales actualizan el saldo en tiempo real.
+- Al pagar un recibo, el monto se distribuye automáticamente a los gastos pendientes del mismo mes (**FIFO**).
+
+## Recuperación de contraseña
+
+Flujo en `recuperar.html`: ingresar usuario + DNI + nueva contraseña.
+
+## Seguridad
+
+- JWT stateless — el token expira y se elimina al cerrar sesión.
+- Guardias de rol en el frontend: un propietario que intente acceder a `admin.html` es redirigido a login.
+- Todos los intentos de acceso no autorizado se registran en el backend con logs estructurados JSON.
+- Los mensajes de error de login son genéricos (no revelan si el usuario existe o el rol incorrecto).
+
+## Estructuras de datos en uso
+
+| Estructura | Dónde |
+|---|---|
+| BST (árbol binario de búsqueda) | Búsqueda de propietarios en backend |
+| AVL (árbol balanceado) | Búsqueda de recibos por rango de saldo |
+| Cola de prioridad | Ranking automático de morosos |
+| Pila | Historial de filtros en búsqueda estructurada |
+| Índice hash (`Map`) | Filtros rápidos de gastos por mes/tipo |
+| Lista enlazada | Recorrido secuencial de propietarios |
+| Matriz | Organización de recibos por mes y propietario |
+
+## Despliegue
+
+| Componente | Plataforma |
+|---|---|
+| Frontend | GitHub Pages |
+| Backend | Render Web Service |
+| Base de datos | PostgreSQL (Render) |
+
+> Si no ves cambios de frontend, forzar recarga con `Ctrl/Cmd + Shift + R`.
+
+---
+
+**Versión:** 5.0  
+**Fecha:** Junio 2026

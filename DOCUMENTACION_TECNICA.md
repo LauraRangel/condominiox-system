@@ -1,1015 +1,839 @@
-# Documentación Técnica - Sistema CondominioX
+# Documentación Técnica — Sistema CondominioX
 
-## 0. Arquitectura General (Resumen)
+## 0. Arquitectura General
 
-- **Frontend:** HTML, CSS, JavaScript (panel admin y propietario).
-- **Backend:** Flask + PostgreSQL (API REST).
-- **Hosting:** Frontend en GitHub Pages, backend en Render.
+### Stack tecnológico
+
+| Capa | Tecnología |
+|---|---|
+| Frontend | HTML5 + CSS3 + JavaScript (vanilla) |
+| Backend | Python 3 + Flask (API REST) |
+| Base de datos | PostgreSQL |
+| Autenticación | JWT (Bearer token) |
+| Hosting frontend | GitHub Pages |
+| Hosting backend | Render Web Service |
+
+### Patrón arquitectónico: MVC + DAO
+
+```
+Routes (Controller) → Services (Business Logic) → DAO (Data Access) → PostgreSQL
+                                                  ↕
+                                          structures.py (BST, AVL, Cola, etc.)
+```
+
+- **Routes** (`backend/routes/`): reciben la request HTTP, validan auth/rol, delegan al service.
+- **Services** (`backend/services/`): contienen la lógica de negocio pura, sin conocer Flask ni SQL.
+- **DAO** (`backend/dao/`): SQL puro, sin lógica de negocio. Un archivo por entidad.
+- **Structures** (`backend/structures.py`): estructuras de datos académicas usadas por los services.
 
 ### Variables de entorno (backend)
-- `DATABASE_URL`: cadena de conexión a PostgreSQL.
-- `JWT_SECRET`: clave para firmar tokens JWT.
-- Opcional: `JWT_ISSUER`, `JWT_EXPIRES_SECONDS`.
 
-### Endpoints principales (API)
-- `POST /api/login`
-- `GET /api/propietarios` | `POST /api/propietarios` | `DELETE /api/propietarios/:id`
-- `GET /api/gastos` | `POST /api/gastos` | `DELETE /api/gastos/:id`
-- `POST /api/recibos/generar`
-- `POST /api/recibos/recalcular`
-- `GET /api/recibos?estado=pendientes|pagados&mes=YYYY-MM`
-- `GET /api/recibos/propietario/:id`
-- `POST /api/recibos/:id/pagar` (pagos parciales)
-- `DELETE /api/recibos/:id`
-- `GET /api/configuracion` | `PUT /api/configuracion`
+```
+DATABASE_URL=postgresql://user:pass@host/db
+JWT_SECRET=clave_secreta
+JWT_EXPIRES_SECONDS=86400   # opcional, default 24h
+```
 
 ---
 
-## 1. HTML: Estructura Básica y Elementos
+## 1. HTML: Estructura y Elementos
 
-### Checklist de Requisitos (Dónde se ve en el proyecto)
+### Checklist de requisitos
 
-- **Estructura básica HTML + meta tags:** `index.html`, `admin.html`, `propietario.html`, `recuperar.html` (etiquetas `<html>`, `<head>`, `<meta charset>`, `<meta viewport>`).
-- **Etiquetas de texto:** `index.html` y `admin.html` (`<h1>`, `<h2>`, `<p>`, `<span>`, `<small>`).
-- **Enlaces:** `index.html` (link a `recuperar.html`).
-- **Encabezado/menú/cuerpo:** `admin.html` y `propietario.html` (`<aside class="sidebar">`, `<main class="panel-content">`).
-- **Menú hamburguesa responsive:** `index.html`, `admin.html`, `propietario.html` (botón `.menu-toggle` + `toggleSidebarMenu()`).
-- **Formularios:** `index.html` (login), `admin.html` (propietarios/gastos/config), `propietario.html` (cambiar contraseña).
-- **Tablas:** `admin.html` (propietarios/gastos/recibos/resumen), `propietario.html` (recibos).
-- **Multimedia (imágenes):** `img/logo.png` usado en `index.html`, `admin.html`, `propietario.html`.
+| Requisito | Dónde se aplica |
+|---|---|
+| Estructura básica + meta tags | `index.html`, `admin.html`, `propietario.html`, `recuperar.html` |
+| Etiquetas de texto (`h1`–`h3`, `p`, `span`, `small`) | Todos los archivos HTML |
+| Enlace a página externa | `index.html` → `recuperar.html` |
+| Encabezado/menú/cuerpo semántico | `<aside>`, `<nav>`, `<main>`, `<section>` en admin y propietario |
+| Menú hamburguesa responsive | `.menu-toggle` + `toggleSidebarMenu()` en `auth.js` |
+| Formularios con validación | Login, propietarios, gastos, cambio de contraseña |
+| Tablas | Propietarios, gastos, recibos, morosos, resumen mensual |
+| Multimedia (imágenes) | `img/logo.png` en todas las páginas |
+| Accesibilidad (`aria-*`, `role`, `label for`) | Modales, inputs, botones de contraseña |
 
-### 1.1 Estructura del Documento HTML
+### 1.1 Estructura del documento
 
 ```html
-<!DOCTYPE html>           <!-- Declaración del tipo de documento HTML5 -->
-<html lang="es">          <!-- Elemento raíz con idioma español -->
-<head>                    <!-- Cabecera con metadatos -->
-    ...
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Panel de Administrador - CondominioX">
+    <title>Panel Administrador - CondominioX</title>
+    <link rel="stylesheet" href="css/styles.css?v=20260306">
 </head>
-<body>                    <!-- Cuerpo del documento -->
-    ...
+<body>
+    <div class="app-container">
+        <aside class="sidebar">...</aside>
+        <main class="panel-content">...</main>
+    </div>
+    <!-- Modales al final del body -->
+    <div id="confirmModal" class="modal-overlay hidden">...</div>
+    <div id="toast-container"></div>
+    <script src="js/config.js?v=20260306"></script>
+    <script src="js/auth.js?v=20260306"></script>
+    <script src="js/admin.js?v=20260306"></script>
 </body>
 </html>
 ```
 
-### 1.2 Meta Tags Básicos
+**Nota sobre versioning:** El sufijo `?v=20260306` en CSS y JS fuerza al navegador a descargar la versión más reciente tras un deploy, evitando servir archivos en caché.
 
-Los meta tags proporcionan información sobre el documento:
+### 1.2 Layout de dos columnas
 
-```html
-<meta charset="UTF-8">
 ```
-- **charset="UTF-8"**: Define la codificación de caracteres. UTF-8 soporta caracteres especiales como ñ, tildes y símbolos.
-
-```html
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+┌─────────────────────────────────────────────────┐
+│  <aside class="sidebar">    │  <main>            │
+│  Logo + nav + usuario       │  Secciones         │
+│  (280px fijo)               │  (flex: 1)         │
+└─────────────────────────────────────────────────┘
 ```
-- **viewport**: Controla cómo se muestra la página en dispositivos móviles.
-- **width=device-width**: El ancho se ajusta al dispositivo.
-- **initial-scale=1.0**: Escala inicial del zoom (100%).
 
-```html
-<meta name="description" content="CondominioX - Sistema de Gestión...">
+```css
+.app-container {
+    display: flex;
+    min-height: 100vh;
+}
+.sidebar {
+    width: 280px;
+    flex-shrink: 0;
+}
+.panel-content {
+    flex: 1;
+    overflow-y: auto;
+}
 ```
-- **description**: Descripción del sitio para motores de búsqueda (SEO).
 
-### 1.3 Etiquetas de Texto
+### 1.3 Tipos de inputs usados
 
-| Etiqueta | Uso en el Proyecto | Descripción |
-|----------|-------------------|-------------|
-| `<h1>` | `<h1>CONDOMINIOX</h1>` | Título principal (solo 1 por página) |
-| `<h2>` | `<h2>Dashboard</h2>` | Títulos de secciones |
-| `<h3>` | `<h3>Nuevo Propietario</h3>` | Subtítulos de formularios |
-| `<h4>` | `<h4>Seguridad</h4>` | Títulos menores |
-| `<p>` | `<p>Resumen general</p>` | Párrafos de texto |
-| `<span>` | `<span class="stat-value">0</span>` | Texto en línea |
-| `<small>` | `<small>Mínimo 6 caracteres</small>` | Texto pequeño/ayuda |
-| `<strong>` | `<strong>${formatCurrency(total)}</strong>` | Texto en negrita |
+| Tipo | Ejemplo de uso |
+|---|---|
+| `text` | Nombre, usuario, DNI, proveedor |
+| `password` | Contraseñas (con toggle ver/ocultar) |
+| `email` | Correo electrónico |
+| `tel` | Teléfono |
+| `number` | Montos, min/step |
+| `date` | Fecha de emisión de recibo |
+| `month` | Filtro por mes (YYYY-MM) |
+| `select` | Tipo de usuario, tipo de gasto, tipo de anuncio |
+| `textarea` | Contenido de anuncio |
+| `hidden` | Tipo de usuario en login |
 
-### 1.4 Enlaces
+### 1.4 Modales: estructura estándar
 
-```html
-<a href="recuperar.html">¿Olvidó su contraseña?</a>
-```
-- **href**: Dirección de destino del enlace.
-- Enlace relativo (mismo directorio).
+Todos los modales del sistema usan esta estructura consistente:
 
 ```html
-<link rel="stylesheet" href="css/styles.css">
-```
-- Enlaza la hoja de estilos CSS externa.
-
-### 1.5 Saltos de Línea y Estructura
-
-El proyecto usa contenedores semánticos en lugar de `<br>`:
-
-```html
-<div class="form-group">      <!-- Agrupa elementos de formulario -->
-    <label>...</label>
-    <input>...</input>
+<div id="miModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="miModalTitulo">
+    <div class="modal-card" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3>
+                <span class="modal-icon success">✅</span>
+                <span id="miModalTitulo">Título</span>
+            </h3>
+            <button type="button" class="btn-close" onclick="cerrarModal()" aria-label="Cerrar">×</button>
+        </div>
+        <div class="modal-body">
+            <!-- Contenido -->
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>
+            <button class="btn btn-primary" onclick="confirmar()">Confirmar</button>
+        </div>
+    </div>
 </div>
-
-<section id="dashboard-section">  <!-- Sección semántica -->
-    ...
-</section>
-
-<aside class="sidebar">       <!-- Barra lateral -->
-    ...
-</aside>
-
-<main class="panel-content">  <!-- Contenido principal -->
-    ...
-</main>
-
-<nav class="sidebar-nav">     <!-- Navegación -->
-    ...
-</nav>
 ```
+
+- `modal-overlay`: fondo semitransparente, cierre al hacer click fuera.
+- `onclick="event.stopPropagation()"` en `modal-card` evita que el click se propague al overlay.
+- `aria-modal`, `role="dialog"`, `aria-labelledby`: accesibilidad.
 
 ---
 
-## 2. CSS: Sintaxis, Selectores y Atributos
+## 2. CSS: Estilos y Diseño
 
-### 2.1 Variables CSS (Custom Properties)
-
-Las variables permiten reutilizar valores en todo el CSS:
+### 2.1 Variables CSS
 
 ```css
 :root {
-    --primary-dark: #1e3a3a;      /* Verde oscuro */
-    --primary: #2d4a4a;            /* Verde principal */
-    --accent-gold: #c9a227;        /* Dorado */
-    --white: #ffffff;              /* Blanco */
-    --off-white: #f8f9fa;          /* Gris claro */
-    --shadow: 0 4px 20px rgba(0, 0, 0, 0.1);  /* Sombra */
-    --radius: 12px;                /* Radio de bordes */
-    --transition: all 0.3s ease;   /* Transición suave */
+    --primary-dark: #1e3a3a;
+    --primary: #2d4a4a;
+    --accent-gold: #c9a227;
+    --accent-gold-dark: #a07d1a;
+    --white: #ffffff;
+    --off-white: #f8f9fa;
+    --light-gray: #e2e8f0;
+    --text-dark: #1e293b;
+    --text-muted: #64748b;
+    --radius: 12px;
+    --radius-lg: 16px;
+    --shadow: 0 4px 20px rgba(0,0,0,.1);
+    --transition: all 0.3s ease;
 }
 ```
 
-### Checklist de CSS
+### 2.2 Checklist CSS
 
-- **Selectores y valores:** `css/styles.css` (clases, IDs, pseudo-clases).
-- **Tipografía / colores / íconos:** `css/styles.css` + `img/logo.png`.
-- **Transiciones:** botones y navegación (`.btn:hover`, `.nav-item:hover`).
-- **Animaciones (keyframes):** `css/styles.css` (`@keyframes floatLogo`, `fadeUp`, `slideIn`).
-- **Flexbox:** `.sidebar`, `.action-buttons`, `.nav-item`.
-- **Grid:** `.stats-grid`, `.form-row`.
-- **Responsive:** `@media (max-width: 992px)` y `@media (max-width: 576px)` en `css/styles.css`.
-- **Menú hamburguesa:** `.menu-toggle`, `.sidebar.menu-open .sidebar-nav` en `css/styles.css` + función `toggleSidebarMenu()` en `js/auth.js`.
+| Requisito | Dónde |
+|---|---|
+| Variables CSS (custom properties) | `:root` en `styles.css` |
+| Selectores de clase, ID, pseudo-clase | `.btn:hover`, `#loginForm`, `tr:nth-child(even)` |
+| Tipografía y colores | Variables + clases de texto |
+| Flexbox | Sidebar, nav, cards, filter-bar |
+| Grid | Stats grid, forms, recibos-actions-row |
+| Transiciones | Botones, modales, sidebar |
+| Animaciones (`@keyframes`) | `fadeInOverlay`, `slideUpModal`, toast entrada/salida |
+| Responsive (media queries) | `@media (max-width: 992px)`, `@media (max-width: 576px)` |
+| Menú hamburguesa | `.menu-toggle` visible solo en móvil |
+
+### 2.3 Sistema de botones
+
+```css
+.btn           /* base: padding, border-radius, cursor */
+.btn-primary   /* dorado — acción principal */
+.btn-secondary /* gris — acción secundaria / cancelar */
+.btn-success   /* verde — acción positiva */
+.btn-danger    /* rojo — eliminar / acción destructiva */
+.btn-sm        /* tamaño reducido para tablas y barras */
+```
+
+### 2.4 Sistema de notificaciones Toast
+
+Los toasts reemplazan todos los `alert()` del sistema. Se invocan con:
+
+```javascript
+showToast('Mensaje', 'success' | 'error' | 'warning' | 'info', 'Título opcional');
+```
+
+Estructura CSS:
+```css
+.toast              /* contenedor base, posición fixed bottom-right */
+.toast-success      /* borde e ícono verde */
+.toast-error        /* borde e ícono rojo */
+.toast-warning      /* borde e ícono amarillo */
+.toast-info         /* borde e ícono azul */
+```
+
+Auto-desaparece a los 4 segundos con animación de salida.
+
+### 2.5 Animaciones de modales
+
+```css
+@keyframes fadeInOverlay {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes slideUpModal {
+    from { transform: translateY(30px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+}
+
+.modal-overlay { animation: fadeInOverlay .2s ease; }
+.modal-card    { animation: slideUpModal .25s ease; }
+```
+
+### 2.6 Cards financieras (Dashboard)
+
+```css
+.financiero-card     /* base: border-radius, padding, shadow */
+.fc-blue             /* azul — total emitido */
+.fc-green            /* verde — total cobrado */
+.fc-red              /* rojo — saldo pendiente */
+.fc-amber            /* amarillo — porcentaje cobranza */
+```
+
+### 2.7 Modal con tabs (Gastos)
+
+```css
+.gasto-tabs    /* contenedor de pestañas */
+.gasto-tab     /* pestaña individual */
+.gasto-tab.active  /* pestaña activa */
+.gasto-panel   /* contenido de cada pestaña (hidden por default) */
+.gasto-panel.active /* panel visible */
+```
 
 ---
 
-## 3. Estructura del Layout
+## 3. JavaScript: Organización y Funciones
 
-### 3.1 Encabezado con Menú (Sidebar)
+### 3.1 config.js — Funciones compartidas
 
-```html
-<aside class="sidebar">
-    <!-- Header del sidebar -->
-    <div class="sidebar-header">
-        <img src="img/logo.png" alt="Logo" class="logo-img">
-        <h1>CONDOMINIOX</h1>
-        <p class="tagline">Gestión Inteligente</p>
-        <button class="menu-toggle" type="button" onclick="toggleSidebarMenu()">☰</button>
-    </div>
+```javascript
+// URL del backend
+const API_URL = 'https://condominiox-system.onrender.com/api';
 
-    <!-- Navegación/Menú -->
-    <nav class="sidebar-nav">
-        <button class="nav-item active" onclick="showTab('inicio')">
-            <span class="nav-icon">🏠</span>
-            <span>Inicio</span>
-        </button>
-        <!-- Más botones... -->
-    </nav>
+// Fetch autenticado — agrega Bearer token y maneja 401
+async function apiFetch(path, options = {}) { ... }
 
-    <!-- Footer del sidebar -->
-    <div class="sidebar-footer">
-        <p>&copy; 2025 CondominioX</p>
-    </div>
-</aside>
+// Helpers de localStorage
+function getAuthToken()          // lee 'auth_token'
+function setAuthToken(token)     // guarda 'auth_token'
+function removeAuthToken()       // borra token + user_data
+function getUserData()           // lee y parsea 'user_data'
+function setUserData(data)       // guarda como JSON
+
+// Formato
+function formatDate(dateString)       // DD/MM/YYYY
+function formatMonthYear(dateString)  // "junio 2026"
+function formatCurrency(amount)       // "S/ 120.00"
+
+// Notificaciones
+function showToast(message, type, title)  // toast no-bloqueante
+
+// Modal de confirmación (compartido admin + propietario)
+function confirmModal(message, title, tipo)  // retorna Promise<boolean>
+function cerrarConfirmModal(accepted)
 ```
 
-**CSS del Sidebar:**
-```css
-.sidebar {
-    width: 280px;
-    background: linear-gradient(180deg, var(--primary-dark), var(--primary));
-    padding: 30px 20px;
-    display: flex;
-    flex-direction: column;
-    position: fixed;
-    height: 100vh;
-    left: 0;
-    top: 0;
+### 3.2 auth.js — Autenticación y UI común
+
+```javascript
+// Login: POST /api/login → guarda token y userData → redirige por rol
+document.getElementById('loginForm').addEventListener('submit', ...)
+
+// Guardia de rol: se ejecuta al cargar admin.html / propietario.html
+if (window.location.pathname.includes('admin.html')) {
+    requireAuth();
+    const userData = getUserData();
+    if (!userData || userData.tipo !== 'Administrador') {
+        removeAuthToken();
+        window.location.replace('index.html');
+    }
 }
-```
 
-**Menú hamburguesa (móvil):**
-- El botón `.menu-toggle` se muestra en resoluciones menores a `992px`.
-- Al hacer click, `toggleSidebarMenu()` agrega/quita `menu-open` en `.sidebar`.
-- Con `.sidebar.menu-open .sidebar-nav { display: flex; }` se despliega el menú.
-
-### 3.2 Cuerpo (Contenido Principal)
-
-```html
-<main class="main-content">
-    <div class="tab-content active">
-        <div class="content-header">
-            <h2>Bienvenido</h2>
-            <p>Seleccione su tipo de acceso</p>
-        </div>
-        <!-- Contenido... -->
-    </div>
-</main>
-```
-
-**CSS:**
-```css
-.main-content {
-    flex: 1;
-    margin-left: 280px;    /* Espacio para el sidebar */
-    padding: 40px;
-    background: var(--off-white);
-    min-height: 100vh;
+// Cerrar sesión con confirmación modal
+async function cerrarSesion() {
+    const ok = await confirmModal('¿Está seguro que desea cerrar sesión?', 'Cerrar sesión');
+    if (ok) { removeAuthToken(); window.location.replace('index.html'); }
 }
+
+// Toggle de visibilidad de contraseña
+function inicializarToggleContrasenas()  // busca todos los .password-toggle-btn
+
+// Responsive sidebar
+function toggleSidebarMenu()
 ```
 
-### 3.3 Pie de Página
+### 3.3 admin.js — Panel administrador
 
-```html
-<div class="sidebar-footer">
-    <p>&copy; 2025 CondominioX</p>
-</div>
+Principales grupos de funciones:
+
+```javascript
+// Dashboard
+cargarDashboard()          // propietarios, recibos, gastos
+actualizarResumenFinanciero()  // GET /api/reportes/financiero
+
+// Propietarios
+cargarPropietarios()
+crearPropietario()
+editarPropietario(id)
+eliminarPropietario(id)    // usa confirmModal
+abrirEstadoCuenta(id)      // modal con recibos del propietario
+
+// Gastos
+cargarGastos()
+abrirModalGasto(tipo)      // abre modal con pestaña activa
+switchGastoTab(tipo)       // cambia entre mantenimiento/luz/agua
+submitGasto(event, tipo)   // envía el formulario del panel activo
+pagarGasto(id)
+
+// Recibos
+generarRecibos()
+recalcularRecibos()
+setRecibosVista('pendientes'|'pagados')
+setFiltroMesRecibos()
+buscarConEstructura()      // GET /api/recibos/estructura/avl
+cargarTopMorosos()         // GET /api/recibos/morosos/prioridad
+exportarMorosidadExcel()   // GET /api/reportes/morosidad/excel → blob → descarga
+
+// Anuncios
+cargarAnuncios()
+crearAnuncio()
+eliminarAnuncio(id)
+
+// Estructuras de datos JS
+class PilaFiltros          // historial de filtros aplicados
+class IndiceGastos         // Map por mes/tipo para búsqueda O(1)
+```
+
+### 3.4 propietario.js — Panel propietario
+
+```javascript
+// Información personal
+cargarInformacionPersonal()    // GET /api/mi-perfil
+activarEdicionContacto(true|false)
+guardarContacto()              // PUT /api/propietarios/:id/contacto
+
+// Recibos
+cargarRecibosPendientes()
+cargarRecibosPagados()
+filtrarPagadosPorMes()
+pagarRecibo(idRecibo, saldo)   // abre modal de pago
+usarMontoTotal()               // rellena el input con el saldo completo
+confirmarPago()                // POST /api/recibos/:id/pagar
+
+// Comunicados
+cargarComunicados()            // GET /api/comunicados
+marcarLeido(id)                // POST /api/comunicados/:id/leer
+filtrarComunicados()
+
+// Perfil
+// Cambio de contraseña: PUT /api/mi-contrasena
+```
+
+### 3.5 Patrón de fetch con manejo de errores
+
+```javascript
+// apiFetch agrega token y redirige en 401 automáticamente
+const { response, data } = await apiFetch('/recibos', {
+    method: 'POST',
+    body: JSON.stringify({ fecha: '2026-06-09' })
+});
+
+if (!response.ok) {
+    showToast(data.error || 'Error al procesar', 'error');
+    return;
+}
+showToast('Recibos generados', 'success');
 ```
 
 ---
 
 ## 4. Formularios
 
-### 4.1 Estructura Básica del Formulario
+### 4.1 Atributos de validación usados
 
 ```html
-<form id="loginForm" class="form-login">
-    <!-- Campo oculto -->
-    <input type="hidden" id="tipoUsuario" name="tipoUsuario" value="">
-
-    <!-- Grupo de campo -->
-    <div class="form-group">
-        <label for="usuario">Usuario</label>
-        <div class="input-wrapper">
-            <span class="input-icon">👤</span>
-            <input
-                type="text"
-                id="usuario"
-                name="usuario"
-                placeholder="Ingrese su usuario"
-                required
-                autocomplete="username"
-            >
-        </div>
-    </div>
-
-    <!-- Mensaje de error/éxito -->
-    <div id="mensaje" class="mensaje"></div>
-
-    <!-- Botón de envío -->
-    <button type="submit" class="btn btn-primary">
-        <span>Iniciar Sesión</span>
-        <span class="btn-arrow">→</span>
-    </button>
-</form>
+<input type="text"     required maxlength="8">          <!-- DNI -->
+<input type="password" required minlength="6">          <!-- Contraseña -->
+<input type="number"   required min="0.01" step="0.01"> <!-- Montos -->
+<input type="email"    required>                         <!-- Correo -->
+<input type="month"    onchange="filtrar()">             <!-- Filtro mes -->
 ```
 
-### 4.2 Tipos de Elementos de Formulario
+### 4.2 Formularios en modal con tabs (Gastos)
 
-| Elemento | Código | Uso |
-|----------|--------|-----|
-| **Text** | `<input type="text">` | Nombre, usuario, DNI |
-| **Password** | `<input type="password">` | Contraseñas |
-| **Email** | `<input type="email">` | Correo electrónico |
-| **Tel** | `<input type="tel">` | Teléfono |
-| **Number** | `<input type="number" step="0.01">` | Montos |
-| **Date** | `<input type="date">` | Fechas |
-| **Month** | `<input type="month">` | Mes y año |
-| **Select** | `<select><option>...</option></select>` | Listas desplegables |
-| **Textarea** | `<textarea rows="3">` | Texto largo |
-| **Hidden** | `<input type="hidden">` | Datos ocultos |
+Los tres tipos de gasto (mantenimiento, luz, agua) comparten un único modal con tres paneles. Solo uno es visible a la vez:
 
-### 4.3 Atributos de Validación
+```javascript
+function switchGastoTab(tipo) {
+    // quita .active de todos los tabs y paneles
+    // activa el tab e ícono del tipo seleccionado
+}
+```
 
 ```html
-<input type="text" id="propDNI" required maxlength="8">
-<input type="password" id="propContrasena" required minlength="6">
-<input type="number" id="gastoMonto" step="0.01" min="0" required>
-```
-
-| Atributo | Descripción |
-|----------|-------------|
-| `required` | Campo obligatorio |
-| `maxlength="8"` | Máximo 8 caracteres |
-| `minlength="6"` | Mínimo 6 caracteres |
-| `min="0"` | Valor mínimo |
-| `step="0.01"` | Incremento decimal |
-| `placeholder` | Texto de ayuda |
-
-### 4.4 CSS de Formularios
-
-```css
-/* Grupo de campos */
-.form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-/* Etiquetas */
-.form-group label {
-    font-weight: 600;
-    color: var(--text-dark);
-}
-
-/* Inputs */
-.form-group input,
-.form-group select,
-.form-group textarea {
-    width: 100%;
-    padding: 12px 15px;
-    border: 2px solid var(--light-gray);
-    border-radius: var(--radius);
-    font-size: 1rem;
-    transition: var(--transition);
-}
-
-/* Focus (cuando está seleccionado) */
-.form-group input:focus {
-    outline: none;
-    border-color: var(--accent-gold);
-    box-shadow: 0 0 0 4px rgba(201, 162, 39, 0.15);
-}
-
-/* Filas de 2 columnas */
-.form-row {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
-}
+<div class="gasto-tabs">
+    <button class="gasto-tab active" onclick="switchGastoTab('mantenimiento')">🔧 Mantenimiento</button>
+    <button class="gasto-tab"        onclick="switchGastoTab('luz')">⚡ Luz</button>
+    <button class="gasto-tab"        onclick="switchGastoTab('agua')">💧 Agua</button>
+</div>
+<div class="gasto-panel active" id="panelMant">...</div>
+<div class="gasto-panel"        id="panelLuz">...</div>
+<div class="gasto-panel"        id="panelAgua">...</div>
 ```
 
 ---
 
-## 5. Multimedia: Imágenes
+## 5. Tablas
 
-### 5.1 Etiqueta de Imagen
-
-```html
-<img src="img/logo.png" alt="CondominioX Logo" class="logo-img">
-```
-
-| Atributo | Descripción |
-|----------|-------------|
-| `src` | Ruta de la imagen |
-| `alt` | Texto alternativo (accesibilidad y SEO) |
-| `class` | Clase CSS para estilos |
-
-### 5.2 CSS de Imágenes
-
-```css
-.sidebar-header .logo-img {
-    width: 120px;
-    height: 120px;
-    object-fit: contain;    /* Mantiene proporción */
-    margin-bottom: 15px;
-    filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.3));
-}
-
-.about-logo img {
-    width: 150px;
-    height: 150px;
-    object-fit: contain;
-}
-```
-
----
-
-## 6. Tablas
-
-### 6.1 Estructura de Tabla
+### 5.1 Estructura estándar
 
 ```html
 <div class="data-table-container">
     <table class="data-table">
-        <!-- Encabezado -->
         <thead>
             <tr>
                 <th>ID</th>
-                <th>Nombre Completo</th>
-                <th>DNI</th>
-                <th>Depto.</th>
-                <th>Torre</th>
-                <th>Teléfono</th>
-                <th>Acciones</th>
+                <th>Propietario</th>
+                ...
             </tr>
         </thead>
-        <!-- Cuerpo -->
-        <tbody id="tablaPropietarios">
+        <tbody id="tablaRecibos">
             <tr>
-                <td colspan="7" class="empty-state">No hay propietarios</td>
+                <td colspan="10" class="empty-state">Sin datos</td>
             </tr>
         </tbody>
     </table>
 </div>
 ```
 
-### 6.2 Elementos de Tabla
+### 5.2 Tablas del sistema
 
-| Elemento | Descripción |
-|----------|-------------|
-| `<table>` | Contenedor de la tabla |
-| `<thead>` | Encabezado de la tabla |
-| `<tbody>` | Cuerpo de la tabla |
-| `<tr>` | Fila (table row) |
-| `<th>` | Celda de encabezado |
-| `<td>` | Celda de datos |
-| `colspan="7"` | Celda que ocupa 7 columnas |
+| ID del tbody | Sección | Columnas |
+|---|---|---|
+| `tablaPropietarios` | Propietarios | ID, nombre, DNI, depto., torre, teléfono, acciones |
+| `tablaGastos` | Gastos | ID, tipo, proveedor, mes, monto, pagado, saldo, estado, acciones |
+| `tablaRecibos` | Recibos | ID, propietario, depto., total, pagado, saldo, estado, emisión, pago, acciones |
+| `tablaTopMorosos` | Recibos | #, propietario, depto., saldo, días sin pagar |
+| `tablaEstructuraRecibos` | Recibos (avanzado) | Recibo, propietario, depto., saldo, emisión, estado |
+| `tablaResumenMensual` | Recibos | Mes, total emitido, total pagado, saldo pendiente, recibos |
+| `tablaRecibosPendientes` | Propietario | ID, mes/año, admin, agua, luz, mant., total, pagado, saldo, acciones |
+| `tablaRecibosPagados` | Propietario | ID, mes/año, total, pagado, saldo, fecha pago, desglose |
 
-### 6.3 CSS de Tablas
+---
 
-```css
-/* Contenedor */
-.data-table-container {
-    background: var(--white);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow);
-    overflow: hidden;
-}
+## 6. Base de Datos (PostgreSQL)
 
-/* Tabla */
-.data-table {
-    width: 100%;
-    border-collapse: collapse;   /* Sin espacio entre celdas */
-}
+### 6.1 Esquema de tablas
 
-/* Celdas */
-.data-table th,
-.data-table td {
-    padding: 15px;
-    text-align: left;
-    border-bottom: 1px solid var(--light-gray);
-}
+```sql
+-- Credenciales y roles
+CREATE TABLE usuarios (
+    id SERIAL PRIMARY KEY,
+    usuario VARCHAR(50) UNIQUE NOT NULL,
+    contrasena VARCHAR(255) NOT NULL,
+    tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('Administrador','Propietario'))
+);
 
-/* Encabezados */
-.data-table th {
-    background: var(--primary);
-    color: var(--white);
-    font-weight: 600;
-}
+-- Datos personales vinculados a un usuario
+CREATE TABLE propietarios (
+    id SERIAL PRIMARY KEY,
+    usuario_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE,
+    nombre VARCHAR(100) NOT NULL,
+    apellido VARCHAR(100) NOT NULL,
+    dni VARCHAR(8) UNIQUE NOT NULL,
+    nro_departamento VARCHAR(10) NOT NULL,
+    torre VARCHAR(10),
+    correo VARCHAR(150),
+    telefono VARCHAR(20)
+);
 
-/* Hover en filas */
-.data-table tbody tr:hover {
-    background: var(--off-white);
-}
+-- Gastos comunes
+CREATE TABLE gastos (
+    id SERIAL PRIMARY KEY,
+    tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('mantenimiento','luz','agua')),
+    proveedor VARCHAR(150),
+    monto NUMERIC(10,2) NOT NULL,
+    fecha_registro DATE NOT NULL DEFAULT CURRENT_DATE
+);
 
-/* Estado vacío */
-.data-table .empty-state {
-    text-align: center;
-    color: var(--text-muted);
-    padding: 40px;
-}
+-- Pagos de cada gasto
+CREATE TABLE pagos_gastos (
+    id SERIAL PRIMARY KEY,
+    gasto_id INTEGER REFERENCES gastos(id) ON DELETE CASCADE,
+    monto NUMERIC(10,2) NOT NULL CHECK (monto > 0),
+    fecha_pago DATE NOT NULL DEFAULT CURRENT_DATE
+);
+
+-- Monto de administración mensual
+CREATE TABLE configuracion (
+    id SERIAL PRIMARY KEY,
+    monto_administracion NUMERIC(10,2) NOT NULL DEFAULT 0
+);
+
+-- Recibos de cada propietario
+CREATE TABLE recibos (
+    id SERIAL PRIMARY KEY,
+    propietario_id INTEGER REFERENCES propietarios(id) ON DELETE CASCADE,
+    monto_administracion NUMERIC(10,2) NOT NULL DEFAULT 0,
+    monto_agua NUMERIC(10,2) NOT NULL DEFAULT 0,
+    monto_luz NUMERIC(10,2) NOT NULL DEFAULT 0,
+    monto_mantenimiento NUMERIC(10,2) NOT NULL DEFAULT 0,
+    monto_pagado NUMERIC(10,2) NOT NULL DEFAULT 0,
+    pagado BOOLEAN NOT NULL DEFAULT FALSE,
+    fecha_emision DATE NOT NULL,
+    fecha_pago DATE
+);
+
+-- Anuncios / comunicados
+CREATE TABLE anuncios (
+    id SERIAL PRIMARY KEY,
+    titulo VARCHAR(200) NOT NULL,
+    contenido TEXT NOT NULL,
+    tipo VARCHAR(30) NOT NULL CHECK (tipo IN ('mantenimiento','pago','informativo')),
+    fecha_publicacion DATE NOT NULL DEFAULT CURRENT_DATE,
+    fecha_caducidad DATE,
+    activo BOOLEAN DEFAULT TRUE
+);
+
+-- Registro de lecturas por propietario
+CREATE TABLE lecturas_anuncios (
+    id SERIAL PRIMARY KEY,
+    anuncio_id INTEGER REFERENCES anuncios(id) ON DELETE CASCADE,
+    propietario_id INTEGER REFERENCES propietarios(id) ON DELETE CASCADE,
+    fecha_lectura TIMESTAMP DEFAULT NOW(),
+    UNIQUE(anuncio_id, propietario_id)
+);
+```
+
+### 6.2 Campos clave
+
+| Campo | Tabla | Significado |
+|---|---|---|
+| `monto_pagado` | `recibos` | Suma de pagos recibidos (parciales o total) |
+| `pagado` | `recibos` | `TRUE` cuando `monto_pagado >= total_recibo` |
+| `monto_administracion` | `configuracion` | Se copia al generar cada recibo |
+| `fecha_caducidad` | `anuncios` | Nulo = sin caducidad; si es pasada, no se muestra al propietario |
+
+---
+
+## 7. Estructuras de Datos (Backend)
+
+Todas implementadas en `backend/structures.py`.
+
+### 7.1 Lista enlazada — `ListaPropietarios`
+
+```python
+class NodoPropietario:
+    def __init__(self, dato): self.dato = dato; self.siguiente = None
+
+class ListaPropietarios:
+    def insertar(self, dato)           # agrega al final
+    def eliminar_por_id(self, pid)     # recorre y desenlaza
+    def to_list(self) -> list          # convierte a lista Python
+```
+
+Usada en `propietario_service.list_propietarios()` para encapsular el recorrido.
+
+### 7.2 BST — `ArbolPropietariosBST` y `ArbolRecibosBST`
+
+```python
+class NodoBST:
+    def __init__(self, clave, dato): ...
+
+class ArbolBST:
+    def insertar(self, clave, dato)
+    def buscar(self, clave) -> dato | None
+    def recorrer(self, modo='inorden') -> list   # inorden/preorden/postorden
+    def rango(self, min_clave, max_clave) -> list
+```
+
+- `ArbolPropietariosBST`: clave = (apellido, nombre), usado en búsquedas por texto.
+- `ArbolRecibosBST`: clave = (saldo, id), usado en consultas `/api/recibos/estructura/bst`.
+
+### 7.3 AVL — `ArbolRecibosAVL`
+
+Extiende `ArbolBST` con rotaciones para mantener balance:
+
+```python
+class ArbolRecibosAVL(ArbolBST):
+    def _altura(self, nodo)
+    def _balance(self, nodo)
+    def _rotar_derecha(self, y)
+    def _rotar_izquierda(self, x)
+    def insertar(self, clave, dato)  # rebalancea tras insertar
+```
+
+Usado en `/api/recibos/estructura/avl` — recorrido inorden garantiza orden ascendente de saldo.
+
+### 7.4 Cola de prioridad — `ColaPrioridadMorosos`
+
+```python
+class ColaPrioridadMorosos:
+    def enqueue(self, item)            # inserta con prioridad (saldo, dias)
+    def to_sorted_list(self, limit)    # retorna top N ordenados
+```
+
+Criterio de prioridad: mayor saldo pendiente primero; en empate, más días sin pagar. Usado en `/api/recibos/morosos/prioridad` y exportación Excel.
+
+### 7.5 Matriz de recibos — `MatrizRecibos`
+
+```python
+class MatrizRecibos:
+    # dict of dicts: meses[YYYY-MM][propietario_id] = recibo
+    def set_recibo(self, mes, propietario_id, recibo)
+    def get_recibo(self, mes, propietario_id)
+    def listar_por_propietario(self, propietario_id) -> list
+    def total_por_mes(self, mes) -> dict   # emitido, cobrado, saldo
+```
+
+Usada en `recibo_service.list_recibos_admin()` para agrupar y resumir por mes.
+
+---
+
+## 8. Seguridad
+
+### 8.1 JWT
+
+```python
+# middleware.py
+def get_payload() -> (dict, error):
+    auth = request.headers.get('Authorization', '')
+    token = auth.removeprefix('Bearer ').strip()
+    if not token:
+        log_sec.warning("Acceso sin token", extra={"event": "missing_token", ...})
+        return None, {"error": "Token requerido", "code": 401}
+    payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+    return payload, None
+
+def require_roles(payload, *roles) -> error | None:
+    if payload.get('tipo') not in roles:
+        log_sec.warning("Acceso denegado por rol", extra={"event": "forbidden_role", ...})
+        return {"error": "Acceso denegado", "code": 403}
+    return None
+```
+
+### 8.2 Logging de seguridad estructurado
+
+```python
+# utils/logger.py — usa python-json-logger
+import logging
+from pythonjsonlogger import jsonlogger
+
+def get_logger(name):
+    logger = logging.getLogger(name)
+    handler = logging.StreamHandler()
+    handler.setFormatter(jsonlogger.JsonFormatter(
+        '%(asctime)s %(name)s %(levelname)s %(message)s'
+    ))
+    logger.addHandler(handler)
+    return logger
+```
+
+Cada evento de seguridad incluye: `event`, `ip`, `path`, `method`, `user`, `rol_actual`, `rol_requerido`.
+
+### 8.3 Sin revelación de información en login
+
+```python
+# auth_service.py
+# Todos los casos de fallo retornan el mismo mensaje
+return {"error": "Usuario o contraseña inválidos"}, 401
+# Cada caso se loguea internamente con detalle
 ```
 
 ---
 
-## 7. JavaScript: Funciones Principales
+## 9. Responsive Design
 
-### 7.1 config.js - Configuración
-
-```javascript
-// Constantes para localStorage
-const AUTH_TOKEN_KEY = 'auth_token';
-const USER_DATA_KEY = 'user_data';
-
-// Funciones de autenticación
-function getAuthToken() {
-    return localStorage.getItem(AUTH_TOKEN_KEY);
-}
-
-function setAuthToken(token) {
-    localStorage.setItem(AUTH_TOKEN_KEY, token);
-}
-
-function removeAuthToken() {
-    localStorage.removeItem(AUTH_TOKEN_KEY);
-    localStorage.removeItem(USER_DATA_KEY);
-}
-
-// Funciones de formato
-function formatDate(dateString) {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-PE', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
-}
-
-function formatCurrency(amount) {
-    return `S/ ${parseFloat(amount).toFixed(2)}`;
-}
-```
-
-### 7.2 auth.js - Autenticación
-
-```javascript
-// Usuarios de demo
-const USUARIOS_DEMO = {
-    'admin': { id: 1, usuario: 'admin', contrasena: '123456', tipo: 'Administrador' },
-    'propietario': { id: 2, usuario: 'propietario', contrasena: '123456', tipo: 'Propietario' }
-};
-
-// Manejo del formulario de login
-document.getElementById('loginForm').addEventListener('submit', function(e) {
-    e.preventDefault();  // Evita recargar la página
-
-    // Obtener valores
-    const usuario = document.getElementById('usuario').value;
-    const contrasena = document.getElementById('contrasena').value;
-
-    // Validar credenciales
-    const userDemo = USUARIOS_DEMO[usuario];
-    if (userDemo && userDemo.contrasena === contrasena) {
-        // Login exitoso
-        setAuthToken('demo_token_' + Date.now());
-        setUserData({ id: userDemo.id, usuario: userDemo.usuario, tipo: userDemo.tipo });
-
-        // Redirigir según tipo
-        if (userDemo.tipo === 'Administrador') {
-            window.location.href = 'admin.html';
-        } else {
-            window.location.href = 'propietario.html';
-        }
-    }
-});
-
-// Cerrar sesión
-function cerrarSesion() {
-    if (confirm('¿Está seguro que desea cerrar sesión?')) {
-        removeAuthToken();
-        window.location.href = 'index.html';
-    }
-}
-```
-
-### 7.3 admin.js - Panel Administrador
-
-```javascript
-// Datos de ejemplo
-let propietarios = [
-    { id: 1, nombre: 'Juan Carlos', apellido: 'Pérez García', dni: '12345678', ... }
-];
-
-// Cargar dashboard
-function cargarDashboard() {
-    document.getElementById('totalPropietarios').textContent = propietarios.length;
-    // ...
-}
-
-// Listar propietarios en tabla
-function listarPropietarios() {
-    const tbody = document.getElementById('tablaPropietarios');
-    tbody.innerHTML = '';
-
-    propietarios.forEach(prop => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${prop.id}</td>
-            <td>${prop.nombre} ${prop.apellido}</td>
-            <td>${prop.dni}</td>
-            ...
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
-// Manejar formulario
-document.getElementById('formPropietario').addEventListener('submit', function(e) {
-    e.preventDefault();
-
-    // Crear nuevo propietario
-    const nuevoPropietario = {
-        id: obtenerSiguienteId(propietarios),
-        nombre: document.getElementById('propNombre').value.trim(),
-        // ...
-    };
-
-    // Agregar a la lista
-    propietarios.push(nuevoPropietario);
-    listarPropietarios();
-    cargarDashboard();
-});
-
-// Inicialización
-window.addEventListener('DOMContentLoaded', function() {
-    cargarDashboard();
-    listarPropietarios();
-    listarGastos();
-});
-```
-
----
-
-## 8. Responsive Design
-
-### 8.1 Media Queries
+### 9.1 Breakpoints
 
 ```css
-/* Tablet (< 992px) */
 @media (max-width: 992px) {
-    .sidebar {
-        width: 100%;
-        height: auto;
-        position: relative;
-    }
-
-    .main-content {
-        margin-left: 0;
-    }
-
-    .app-container {
-        flex-direction: column;
-    }
-}
-
-/* Móvil (< 576px) */
-@media (max-width: 576px) {
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .form-row {
-        grid-template-columns: 1fr;
-    }
-
-    .action-buttons {
-        flex-direction: column;
-    }
-}
-
-/* Menú hamburguesa */
-@media (max-width: 992px) {
+    /* Tablet: sidebar colapsa, hamburguesa visible */
+    .sidebar { position: fixed; transform: translateX(-100%); }
+    .sidebar.menu-open { transform: translateX(0); }
     .menu-toggle { display: inline-flex; }
-    .sidebar-nav { display: none; }
-    .sidebar.menu-open .sidebar-nav { display: flex; }
+    .panel-content { margin-left: 0; }
+}
+
+@media (max-width: 576px) {
+    /* Móvil: grids a 1 columna */
+    .stats-grid { grid-template-columns: 1fr; }
+    .form-row { grid-template-columns: 1fr; }
+    .recibos-actions-row { grid-template-columns: 1fr; }
 }
 ```
 
-### 8.2 Lógica JavaScript del Menú Hamburguesa
+### 9.2 Menú hamburguesa
 
 ```javascript
+// auth.js
 function toggleSidebarMenu() {
-    const sidebar = document.querySelector('.sidebar');
-    if (!sidebar) return;
-    sidebar.classList.toggle('menu-open');
+    document.querySelector('.sidebar').classList.toggle('menu-open');
 }
-```
-
-- Ubicación: `js/auth.js`.
-- Comportamiento adicional:
-  - se cierra al seleccionar un ítem del menú en móvil,
-  - se cierra al regresar a desktop (`resize > 992px`).
-
----
-
-## 9. Listas HTML
-
-### 9.1 Listas No Ordenadas
-
-Usadas para mostrar funcionalidades en las tarjetas de información:
-
-```html
-<ul class="feature-list">
-    <li><span class="check">✓</span> Gestión de Propietarios</li>
-    <li><span class="check">✓</span> Generar Recibos</li>
-    <li><span class="check">✓</span> Registrar Gastos</li>
-    <li><span class="check">✓</span> Reportes y Estadísticas</li>
-</ul>
-```
-
-| Elemento | Descripción |
-|----------|-------------|
-| `<ul>` | Lista no ordenada (unordered list) |
-| `<li>` | Elemento de lista (list item) |
-
-### 9.2 CSS de Listas
-
-```css
-.feature-list {
-    list-style: none;    /* Quita los puntos por defecto */
-    padding: 25px;
-}
-
-.feature-list li {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 0;
-    border-bottom: 1px solid var(--light-gray);
-}
-
-.feature-list .check {
-    color: #16a34a;      /* Verde para el check */
-    font-weight: bold;
-}
+// Se cierra automáticamente al seleccionar ítem en móvil
+// y al redimensionar la ventana > 992px
 ```
 
 ---
 
-## 10. Botones
-
-### 10.1 Tipos de Botones
-
-```html
-<!-- Botón de envío de formulario -->
-<button type="submit" class="btn btn-primary">Guardar</button>
-
-<!-- Botón normal -->
-<button type="button" class="btn btn-secondary" onclick="cerrarFormulario()">Cancelar</button>
-
-<!-- Botón de navegación -->
-<button class="nav-item active" onclick="mostrarSeccion('dashboard')">
-    <span class="nav-icon">📊</span>
-    <span>Dashboard</span>
-</button>
-
-<!-- Botón de acción -->
-<button class="btn btn-danger btn-sm" onclick="eliminarPropietario(1)">Eliminar</button>
-```
-
-### 10.2 CSS de Botones
+## 10. Animaciones CSS
 
 ```css
-/* Botón base */
-.btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 18px 30px;
-    border: none;
-    border-radius: var(--radius);
-    font-size: 1.1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-/* Botón primario (dorado) */
-.btn-primary {
-    background: linear-gradient(135deg, var(--accent-gold), var(--accent-gold-dark));
-    color: var(--white);
-}
-
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(201, 162, 39, 0.35);
-}
-
-/* Botón secundario (gris) */
-.btn-secondary {
-    background: var(--light-gray);
-    color: var(--text-dark);
-}
-
-/* Botón de éxito (verde) */
-.btn-success {
-    background: linear-gradient(135deg, #22c55e, #16a34a);
-    color: var(--white);
-}
-
-/* Botón de peligro (rojo) */
-.btn-danger {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    color: var(--white);
-}
-
-/* Botón pequeño */
-.btn-sm {
-    padding: 0.4rem 0.8rem;
-    font-size: 0.85rem;
-}
-```
-
----
-
-## 11. Animaciones CSS
-
-### 11.1 Keyframes
-
-```css
+/* Entrada de secciones */
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.panel-section.active { animation: fadeIn 0.3s ease; }
+
+/* Entrada de modales */
+@keyframes fadeInOverlay { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUpModal {
+    from { transform: translateY(30px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
 }
 
-/* Uso de la animación */
-.tab-content.active {
-    animation: fadeIn 0.3s ease;
+/* Toasts */
+@keyframes toastSlideIn {
+    from { transform: translateX(110%); opacity: 0; }
+    to   { transform: translateX(0); opacity: 1; }
 }
-
-.panel-section.active {
-    animation: fadeIn 0.3s ease;
-}
-```
-
-### 11.2 Transiciones
-
-```css
-/* Transición suave en hover */
-.user-type-btn {
-    transition: var(--transition);  /* all 0.3s ease */
-}
-
-.user-type-btn:hover {
-    border-color: var(--accent-gold);
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-lg);
-}
-
-/* Flecha animada en botón */
-.btn-arrow {
-    transition: transform 0.3s ease;
-}
-
-.btn-primary:hover .btn-arrow {
-    transform: translateX(5px);
+@keyframes toastFadeOut {
+    from { opacity: 1; }
+    to   { opacity: 0; transform: translateX(30px); }
 }
 ```
 
 ---
 
-## 12. Etiqueta Script
+## 11. Exportación Excel (CU15)
 
-### 12.1 Scripts Externos
+### Backend — `reporte_service.exportar_morosidad_excel()`
 
-```html
-<!-- Al final del body, antes de cerrar -->
-<script src="js/config.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/admin.js"></script>
+```python
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment
+
+wb = openpyxl.Workbook()
+ws = wb.active
+ws.merge_cells("A1:H1")            # título centrado
+ws["A1"] = "REPORTE DE MOROSIDAD"
+# cabeceras con fill azul + fuente blanca
+# filas con fill alternado
+# ajuste de ancho con manejo de MergedCell
+for col in ws.columns:
+    try:
+        letter = col[0].column_letter  # MergedCell no tiene este atributo
+    except AttributeError:
+        continue
+    ws.column_dimensions[letter].width = min(max_len + 4, 40)
+
+buf = io.BytesIO()
+wb.save(buf)
+return buf.read()   # bytes → send_file
 ```
 
-- Se colocan al final del `<body>` para que el HTML cargue primero
-- El orden importa: config.js primero porque define funciones usadas por los demás
-
-### 12.2 Scripts Internos
-
-```html
-<script>
-    // Función para cambiar de pestaña
-    function showTab(tabName) {
-        document.querySelectorAll('.tab-content').forEach(tab => {
-            tab.classList.remove('active');
-        });
-        document.getElementById('tab-' + tabName).classList.add('active');
-    }
-</script>
-```
-
----
-
-## 13. Eventos JavaScript
-
-### 13.1 Eventos en HTML (onclick)
-
-```html
-<button onclick="mostrarSeccion('dashboard', this)">Dashboard</button>
-<button onclick="eliminarPropietario(${prop.id})">Eliminar</button>
-<button onclick="cerrarSesion()">Cerrar Sesión</button>
-```
-
-### 13.2 Eventos con addEventListener
+### Frontend
 
 ```javascript
-// Evento submit del formulario
-document.getElementById('loginForm').addEventListener('submit', function(e) {
-    e.preventDefault();  // Evita que la página se recargue
-    // Lógica del login...
-});
-
-// Evento DOMContentLoaded (cuando el HTML está listo)
-window.addEventListener('DOMContentLoaded', function() {
-    cargarDashboard();
-    listarPropietarios();
-});
-
-// Evento click en navegación
-document.querySelectorAll('.nav-item').forEach(btn => {
-    btn.addEventListener('click', function() {
-        // Lógica de navegación...
+async function exportarMorosidadExcel() {
+    const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
     });
-});
+    if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        showToast(errData.error || `Error ${response.status}`, 'error');
+        return;
+    }
+    const blob = await response.blob();
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `morosidad_${mes || 'todos'}.xlsx`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+}
 ```
 
 ---
 
-## 14. Manipulación del DOM
-
-### 14.1 Selección de Elementos
-
-```javascript
-// Por ID
-document.getElementById('tablaPropietarios')
-
-// Por clase (devuelve NodeList)
-document.querySelectorAll('.nav-item')
-
-// Por selector CSS
-document.querySelector('.nav-item[data-tab="inicio"]')
-```
-
-### 14.2 Modificación de Contenido
-
-```javascript
-// Cambiar texto
-document.getElementById('totalPropietarios').textContent = propietarios.length;
-
-// Cambiar HTML interno
-tbody.innerHTML = '<tr><td>...</td></tr>';
-
-// Crear elementos
-const tr = document.createElement('tr');
-tr.innerHTML = `<td>${prop.nombre}</td>`;
-tbody.appendChild(tr);
-```
-
-### 14.3 Manipulación de Clases
-
-```javascript
-// Agregar clase
-elemento.classList.add('active');
-
-// Quitar clase
-elemento.classList.remove('active');
-
-// Alternar clase
-elemento.classList.toggle('hidden');
-
-// Verificar si tiene clase
-if (elemento.classList.contains('active')) { ... }
-```
-
----
-
-## 15. Base de Datos (PostgreSQL)
-
-### Tablas principales
-- `usuarios`: credenciales y roles (Administrador/Propietario).
-- `propietarios`: datos personales y vínculo `usuario_id`.
-- `gastos`: mantenimiento, luz y agua (con fecha manual).
-- `recibos`: montos por tipo, `monto_pagado`, estado y fechas.
-- `configuracion`: monto de administración configurable.
-
-### Campos relevantes
-- `recibos.monto_pagado`: permite pagos parciales.
-- `recibos.pagado`: se actualiza cuando `monto_pagado >= total`.
-- `configuracion.monto_administracion`: valor editable desde el panel admin.
-
----
-
-## 16. Estructuras de Datos (Backend)
-
-### Lista enlazada de propietarios (`ListaPropietarios`)
-- Implementación en `backend/structures.py`.
-- Se usa en `GET /api/propietarios` para recorrer e insertar propietarios.
-- Operaciones: insertar, eliminar por id, recorrer, to_list.
-
-### Matriz de recibos por mes (`MatrizRecibos`)
-- Implementación en `backend/structures.py`.
-- Representación: `meses[YYYY-MM][propietario_id] = recibo`.
-- Se usa en:
-  - `GET /api/recibos` (admin) para organizar y resumir por mes.
-  - `GET /api/recibos/propietario/:id` para listar por propietario.
-- Operaciones: set_recibo, get_recibo, total_por_mes, listar_por_propietario.
-
-## Resumen de Archivos
+## 12. Resumen de Archivos
 
 | Archivo | Descripción |
-|---------|-------------|
-| `index.html` | Página de login con selección de usuario |
-| `admin.html` | Panel del administrador |
-| `propietario.html` | Panel del propietario |
+|---|---|
+| `index.html` | Login con selección de rol |
+| `admin.html` | Panel administrador completo |
+| `propietario.html` | Panel propietario |
 | `recuperar.html` | Recuperación de contraseña |
 | `css/styles.css` | Todos los estilos del sistema |
-| `js/config.js` | Configuración y funciones auxiliares |
-| `js/auth.js` | Autenticación y funciones UI |
-| `js/admin.js` | Lógica del panel administrador |
-| `js/propietario.js` | Lógica del panel propietario |
-| `img/logo.png` | Logo del sistema |
+| `js/config.js` | API URL, helpers auth, formateo, toast, confirmModal |
+| `js/auth.js` | Login, guardias de rol, toggle contraseña, sidebar |
+| `js/admin.js` | Lógica completa del panel administrador |
+| `js/propietario.js` | Lógica completa del panel propietario |
+| `backend/app.py` | Inicialización Flask, blueprints, migraciones |
+| `backend/middleware.py` | Validación JWT, roles, logging seguridad |
+| `backend/structures.py` | BST, AVL, Cola, Lista, Matriz |
+| `backend/dao/*.py` | SQL puro por entidad |
+| `backend/services/*.py` | Lógica de negocio por dominio |
+| `backend/routes/*.py` | Endpoints HTTP (Blueprints) |
+| `backend/utils/logger.py` | Logger JSON estructurado |
+| `backend/utils/money.py` | Helpers de precisión monetaria |
+
 ---
+
+**Versión:** 5.0  
+**Fecha:** Junio 2026
