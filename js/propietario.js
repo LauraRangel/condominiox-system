@@ -157,7 +157,7 @@ async function cargarRecibosPendientes() {
             <td>${formatCurrency(pagado)}</td>
             <td>${formatCurrency(saldo)}</td>
             <td>
-                <button class="btn btn-success" onclick="pagarRecibo(${recibo.id})"
+                <button class="btn btn-success" onclick="pagarRecibo(${recibo.id}, ${saldo})"
                         style="padding: 0.4rem 0.8rem;">
                     Pagar
                 </button>
@@ -167,29 +167,61 @@ async function cargarRecibosPendientes() {
     });
 }
 
-async function pagarRecibo(idRecibo) {
-    const montoStr = prompt('Ingrese el monto a pagar');
-    if (!montoStr) {
+let _pagoReciboId = null;
+let _pagoSaldoTotal = 0;
+
+function pagarRecibo(idRecibo, saldo) {
+    _pagoReciboId = idRecibo;
+    _pagoSaldoTotal = saldo;
+    const montoInput = document.getElementById('modalPagoMonto');
+    const errorEl = document.getElementById('modalPagoError');
+    document.getElementById('modalPagoSaldo').textContent = `Saldo pendiente: S/ ${saldo.toFixed(2)}`;
+    montoInput.value = '';
+    montoInput.max = saldo;
+    errorEl.style.display = 'none';
+    document.getElementById('modalPago').classList.remove('hidden');
+    montoInput.focus();
+}
+
+function usarMontoTotal() {
+    document.getElementById('modalPagoMonto').value = _pagoSaldoTotal.toFixed(2);
+    document.getElementById('modalPagoError').style.display = 'none';
+}
+
+function cerrarModalPago() {
+    document.getElementById('modalPago').classList.add('hidden');
+    _pagoReciboId = null;
+}
+
+async function confirmarPago() {
+    const montoStr = document.getElementById('modalPagoMonto').value;
+    const errorEl = document.getElementById('modalPagoError');
+    const monto = parseFloat(montoStr);
+
+    if (Number.isNaN(monto) || monto <= 0) {
+        errorEl.textContent = 'Ingrese un monto válido mayor a cero.';
+        errorEl.style.display = 'block';
         return;
     }
-    const monto = parseFloat(montoStr);
-    if (Number.isNaN(monto) || monto <= 0) {
-        showToast('Monto inválido', 'error');
+    if (monto > _pagoSaldoTotal + 0.001) {
+        errorEl.textContent = `El monto no puede exceder el saldo (S/ ${_pagoSaldoTotal.toFixed(2)}).`;
+        errorEl.style.display = 'block';
         return;
     }
 
-    const { response, data } = await apiFetch(`/recibos/${idRecibo}/pagar`, {
+    const { response, data } = await apiFetch(`/recibos/${_pagoReciboId}/pagar`, {
         method: 'POST',
         body: JSON.stringify({ monto })
     });
 
     if (!response.ok) {
-        showToast(data.error || 'No se pudo procesar el pago', 'error');
+        errorEl.textContent = data.error || 'No se pudo procesar el pago.';
+        errorEl.style.display = 'block';
         return;
     }
 
+    cerrarModalPago();
     showToast('Pago registrado correctamente', 'success');
-
     await cargarEstadisticas();
 }
 
