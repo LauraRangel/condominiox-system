@@ -111,3 +111,34 @@ function formatMonthYear(dateString) {
 function formatCurrency(amount) {
     return `S/ ${parseFloat(amount).toFixed(2)}`;
 }
+
+// Toast notifications
+function showToast(message, type = 'info', title = '') {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        document.body.appendChild(container);
+    }
+
+    const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+    const titles = { success: 'Éxito', error: 'Error', warning: 'Advertencia', info: 'Información' };
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = `
+        <span class="toast-icon">${icons[type] || icons.info}</span>
+        <div class="toast-body">
+            <p class="toast-title">${title || titles[type] || ''}</p>
+            <p class="toast-message">${message}</p>
+        </div>
+        <button class="toast-close" onclick="this.closest('.toast').remove()">✕</button>
+    `;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.add('hiding');
+        setTimeout(() => toast.remove(), 320);
+    }, 4000);
+}

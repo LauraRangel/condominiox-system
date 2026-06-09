@@ -174,7 +174,7 @@ async function pagarRecibo(idRecibo) {
     }
     const monto = parseFloat(montoStr);
     if (Number.isNaN(monto) || monto <= 0) {
-        alert('Monto inválido');
+        showToast('Monto inválido', 'error');
         return;
     }
 
@@ -184,9 +184,11 @@ async function pagarRecibo(idRecibo) {
     });
 
     if (!response.ok) {
-        alert(data.error || 'No se pudo procesar el pago');
+        showToast(data.error || 'No se pudo procesar el pago', 'error');
         return;
     }
+
+    showToast('Pago registrado correctamente', 'success');
 
     await cargarEstadisticas();
 }

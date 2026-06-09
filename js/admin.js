@@ -320,7 +320,7 @@ function abrirNuevoPropietario() {
 function editarPropietario(id) {
     const prop = propietarios.find(item => item.id === id);
     if (!prop) {
-        alert('No se encontró el propietario');
+        showToast('No se encontró el propietario', 'error');
         return;
     }
 
@@ -415,11 +415,11 @@ async function eliminarPropietario(id) {
     });
 
     if (!response.ok) {
-        alert(data.error || 'No se pudo eliminar');
+        showToast(data.error || 'No se pudo eliminar', 'error');
         return;
     }
 
-    alert('Propietario eliminado exitosamente');
+    showToast('Propietario eliminado exitosamente', 'success');
     await cargarPropietarios();
     actualizarDashboard();
 }
@@ -668,25 +668,25 @@ async function eliminarGasto(id) {
     });
 
     if (!response.ok) {
-        alert(data.error || 'No se pudo eliminar');
+        showToast(data.error || 'No se pudo eliminar', 'error');
         return;
     }
 
-    alert('Gasto eliminado');
+    showToast('Gasto eliminado', 'success');
     await cargarGastos();
     actualizarDashboard();
 }
 
 async function pagarGasto(id, saldoActual) {
     if (saldoActual <= 0) {
-        alert('Este gasto ya está completamente pagado');
+        showToast('Este gasto ya está completamente pagado', 'warning');
         return;
     }
     const montoStr = prompt(`Ingrese el monto a pagar (saldo actual ${saldoActual.toFixed(2)})`);
     if (!montoStr) return;
     const monto = parseFloat(montoStr);
     if (Number.isNaN(monto) || monto <= 0) {
-        alert('Monto inválido');
+        showToast('Monto inválido', 'error');
         return;
     }
 
@@ -695,11 +695,11 @@ async function pagarGasto(id, saldoActual) {
         body: JSON.stringify({ monto })
     });
     if (!response.ok) {
-        alert(data.error || 'No se pudo registrar el pago del gasto');
+        showToast(data.error || 'No se pudo registrar el pago del gasto', 'error');
         return;
     }
     await cargarGastos();
-    alert('Pago de gasto registrado');
+    showToast('Pago de gasto registrado', 'success');
 }
 
 // ========================================
@@ -722,11 +722,11 @@ async function generarRecibos() {
     });
 
     if (!response.ok) {
-        alert(data.error || 'No se pudieron generar los recibos');
+        showToast(data.error || 'No se pudieron generar los recibos', 'error');
         return;
     }
 
-    alert(`Se generaron ${data.generados} recibos exitosamente`);
+    showToast(`Se generaron ${data.generados} recibos exitosamente`, 'success');
     await cargarRecibos();
     await cargarRecibos(currentRecibosView);
     await cargarTopMorosos();
@@ -749,11 +749,11 @@ async function recalcularRecibos() {
     });
 
     if (!response.ok) {
-        alert(data.error || 'No se pudo recalcular');
+        showToast(data.error || 'No se pudo recalcular', 'error');
         return;
     }
 
-    alert(`Se recalcularon ${data.actualizados} recibos`);
+    showToast(`Se recalcularon ${data.actualizados} recibos`, 'success');
     await cargarRecibos();
     await cargarRecibos(currentRecibosView);
     await cargarTopMorosos();
@@ -830,11 +830,11 @@ async function eliminarRecibo(id) {
     });
 
     if (!response.ok) {
-        alert(data.error || 'No se pudo eliminar');
+        showToast(data.error || 'No se pudo eliminar', 'error');
         return;
     }
 
-    alert('Recibo eliminado');
+    showToast('Recibo eliminado', 'success');
     await cargarRecibos();
     await cargarRecibos(currentRecibosView);
     await cargarTopMorosos();
@@ -1260,7 +1260,7 @@ async function exportarMorosidadExcel() {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!response.ok) {
-            alert('Error al generar el reporte Excel');
+            showToast('Error al generar el reporte Excel', 'error');
             return;
         }
         const blob = await response.blob();
@@ -1272,6 +1272,6 @@ async function exportarMorosidadExcel() {
         document.body.removeChild(link);
         URL.revokeObjectURL(link.href);
     } catch (e) {
-        alert('Error de conexión al generar el reporte');
+        showToast('Error de conexión al generar el reporte', 'error');
     }
 }

@@ -158,7 +158,7 @@ def pagar_recibo(recibo_id, monto):
                 ELSE NULL
             END
         WHERE id = %s
-        RETURNING id, monto_pagado, pagado, fecha_emision, fecha_pago,
+        RETURNING id, propietario_id, monto_pagado, pagado, fecha_emision, fecha_pago,
                   monto_administracion, monto_agua, monto_luz, monto_mantenimiento
         """,
         [monto, monto, monto, recibo_id],
