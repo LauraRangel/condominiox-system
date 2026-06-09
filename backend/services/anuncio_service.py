@@ -6,32 +6,30 @@ log = get_logger(__name__)
 TIPOS_VALIDOS = ("mantenimiento", "pago", "informativo")
 
 
+def _serializar(row: dict) -> dict:
+    row["fecha_publicacion"] = row["fecha_publicacion"].isoformat() if row.get("fecha_publicacion") else None
+    row["fecha_caducidad"] = row["fecha_caducidad"].isoformat() if row.get("fecha_caducidad") else None
+    return row
+
+
 def listar_anuncios() -> dict:
     rows = anuncio_dao.get_all_anuncios()
-    items = []
-    for row in rows:
-        row["fecha_publicacion"] = row["fecha_publicacion"].isoformat() if row.get("fecha_publicacion") else None
-        items.append(row)
-    return {"items": items}
+    return {"items": [_serializar(row) for row in rows]}
 
 
 def listar_comunicados(propietario_id) -> dict:
     rows = anuncio_dao.get_anuncios_con_lectura(propietario_id)
-    items = []
-    for row in rows:
-        row["fecha_publicacion"] = row["fecha_publicacion"].isoformat() if row.get("fecha_publicacion") else None
-        items.append(row)
-    return {"items": items}
+    return {"items": [_serializar(row) for row in rows]}
 
 
-def crear_anuncio(titulo: str, contenido: str, tipo: str):
+def crear_anuncio(titulo: str, contenido: str, tipo: str, fecha_caducidad=None):
     if not titulo or not contenido or not tipo:
         return None, "Datos incompletos"
     if tipo not in TIPOS_VALIDOS:
         return None, f"Tipo inválido. Use: {', '.join(TIPOS_VALIDOS)}"
-    row = anuncio_dao.create_anuncio(titulo.strip(), contenido.strip(), tipo)
-    if row and row.get("fecha_publicacion"):
-        row["fecha_publicacion"] = row["fecha_publicacion"].isoformat()
+    row = anuncio_dao.create_anuncio(titulo.strip(), contenido.strip(), tipo, fecha_caducidad or None)
+    if row:
+        _serializar(row)
     log.info("Anuncio creado", extra={"tipo": tipo})
     return row, None
 

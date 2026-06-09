@@ -4,7 +4,7 @@ from db import fetch_all, fetch_one, execute_returning, execute
 def get_all_anuncios():
     return fetch_all(
         """
-        SELECT id, titulo, contenido, tipo, fecha_publicacion, activo
+        SELECT id, titulo, contenido, tipo, fecha_publicacion, fecha_caducidad, activo
         FROM anuncios
         WHERE activo = TRUE
         ORDER BY fecha_publicacion DESC, id DESC
@@ -15,26 +15,27 @@ def get_all_anuncios():
 def get_anuncios_con_lectura(propietario_id):
     return fetch_all(
         """
-        SELECT a.id, a.titulo, a.contenido, a.tipo, a.fecha_publicacion,
+        SELECT a.id, a.titulo, a.contenido, a.tipo, a.fecha_publicacion, a.fecha_caducidad,
                CASE WHEN la.id IS NOT NULL THEN TRUE ELSE FALSE END AS leido
         FROM anuncios a
         LEFT JOIN lecturas_anuncios la
             ON la.anuncio_id = a.id AND la.propietario_id = %s
         WHERE a.activo = TRUE
+          AND (a.fecha_caducidad IS NULL OR a.fecha_caducidad >= CURRENT_DATE)
         ORDER BY a.fecha_publicacion DESC, a.id DESC
         """,
         [propietario_id],
     )
 
 
-def create_anuncio(titulo: str, contenido: str, tipo: str):
+def create_anuncio(titulo: str, contenido: str, tipo: str, fecha_caducidad=None):
     return execute_returning(
         """
-        INSERT INTO anuncios (titulo, contenido, tipo)
-        VALUES (%s, %s, %s)
-        RETURNING id, titulo, contenido, tipo, fecha_publicacion, activo
+        INSERT INTO anuncios (titulo, contenido, tipo, fecha_caducidad)
+        VALUES (%s, %s, %s, %s)
+        RETURNING id, titulo, contenido, tipo, fecha_publicacion, fecha_caducidad, activo
         """,
-        [titulo, contenido, tipo],
+        [titulo, contenido, tipo, fecha_caducidad],
     )
 
 

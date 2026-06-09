@@ -1090,12 +1090,12 @@ async function cargarAnuncios() {
     const tbody = document.getElementById('tablaAnuncios');
     if (!tbody) return;
     if (!response.ok) {
-        tbody.innerHTML = `<tr><td colspan="5" class="empty-state">Error al cargar</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="empty-state">Error al cargar</td></tr>`;
         return;
     }
     const items = data.items || [];
     if (!items.length) {
-        tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No hay anuncios publicados</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="empty-state">No hay anuncios publicados</td></tr>`;
         return;
     }
     const tipoLabel = { informativo: 'Informativo', pago: 'Pago', mantenimiento: 'Mantenimiento' };
@@ -1105,6 +1105,7 @@ async function cargarAnuncios() {
             <td>${a.titulo}</td>
             <td><span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:12px;font-size:0.82rem;">${tipoLabel[a.tipo] || a.tipo}</span></td>
             <td>${a.fecha_publicacion || ''}</td>
+            <td>${a.fecha_caducidad ? `<span style="color:#dc2626;">${a.fecha_caducidad}</span>` : '<span style="color:#9ca3af;">Sin caducidad</span>'}</td>
             <td>
                 <button class="btn btn-danger btn-sm" onclick="eliminarAnuncio(${a.id})">Eliminar</button>
             </td>
@@ -1127,12 +1128,13 @@ async function crearAnuncio(event) {
     const titulo = document.getElementById('anuncioTitulo').value.trim();
     const contenido = document.getElementById('anuncioContenido').value.trim();
     const tipo = document.getElementById('anuncioTipo').value;
+    const fecha_caducidad = document.getElementById('anuncioCaducidad').value || null;
     const msgEl = document.getElementById('mensajeAnuncio');
 
     const { response, data } = await apiFetch('/anuncios', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ titulo, contenido, tipo }),
+        body: JSON.stringify({ titulo, contenido, tipo, fecha_caducidad }),
     });
 
     if (response.ok) {

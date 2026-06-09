@@ -653,6 +653,11 @@
                                 <option value="mantenimiento">Mantenimiento</option>
                             </select>
                         </div>
+                        <div class="form-group">
+                            <label for="anuncioCaducidad">Fecha de Caducidad</label>
+                            <input type="date" id="anuncioCaducidad" placeholder="Opcional">
+                            <small style="color:#6b7280;">Dejar vacío si no caduca</small>
+                        </div>
                         <div id="mensajeAnuncio" class="mensaje"></div>
                         <div class="form-actions">
                             <button type="submit" class="btn btn-primary">Publicar</button>
@@ -668,12 +673,13 @@
                                 <th>ID</th>
                                 <th>Título</th>
                                 <th>Tipo</th>
-                                <th>Fecha Publicación</th>
+                                <th>Publicación</th>
+                                <th>Caduca</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="tablaAnuncios">
-                            <tr><td colspan="5" class="empty-state">No hay anuncios publicados</td></tr>
+                            <tr><td colspan="6" class="empty-state">No hay anuncios publicados</td></tr>
                         </tbody>
                     </table>
                 </div>

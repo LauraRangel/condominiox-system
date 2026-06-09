@@ -67,6 +67,7 @@ def _ensure_extra_tables():
             contenido TEXT NOT NULL,
             tipo VARCHAR(30) NOT NULL CHECK (tipo IN ('mantenimiento','pago','informativo')),
             fecha_publicacion DATE NOT NULL DEFAULT CURRENT_DATE,
+            fecha_caducidad DATE,
             activo BOOLEAN DEFAULT TRUE
         )
         """
@@ -84,7 +85,17 @@ def _ensure_extra_tables():
     )
 
 
+def _migrate_anuncios():
+    execute(
+        """
+        ALTER TABLE anuncios
+        ADD COLUMN IF NOT EXISTS fecha_caducidad DATE
+        """
+    )
+
+
 _ensure_extra_tables()
+_migrate_anuncios()
 
 if __name__ == "__main__":
     app.run(debug=True)

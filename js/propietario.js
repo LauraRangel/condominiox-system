@@ -444,7 +444,8 @@ function _renderComunicados(items) {
                     <h4 style="margin:0.5rem 0 0.25rem 0;">${c.titulo}</h4>
                 </div>
                 <div style="text-align:right;">
-                    <small style="color:#6b7280;">${c.fecha_publicacion || ''}</small>
+                    <small style="color:#6b7280;">Publicado: ${c.fecha_publicacion || ''}</small>
+                    ${c.fecha_caducidad ? `<br><small style="color:#dc2626;">Caduca: ${c.fecha_caducidad}</small>` : ''}
                     ${!leido ? `<br><button class="btn btn-secondary btn-sm" style="margin-top:4px;" onclick="marcarLeido(${c.id})">Marcar leído</button>` : '<br><small style="color:#16a34a;">✓ Leído</small>'}
                 </div>
             </div>

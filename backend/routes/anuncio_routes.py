@@ -28,7 +28,7 @@ def crear_anuncio():
 
     body = request.get_json(silent=True) or {}
     row, err = anuncio_service.crear_anuncio(
-        body.get("titulo"), body.get("contenido"), body.get("tipo")
+        body.get("titulo"), body.get("contenido"), body.get("tipo"), body.get("fecha_caducidad")
     )
     if err:
         return jsonify({"error": err}), 400
