@@ -129,16 +129,27 @@ function cerrarConfirmModal(accepted) {
     }
 }
 
-function confirmModal(message, title = 'Confirmar acción') {
+function confirmModal(message, title = 'Confirmar acción', tipo = 'danger') {
     const modal = document.getElementById('confirmModal');
     const titleEl = document.getElementById('confirmModalTitle');
     const messageEl = document.getElementById('confirmModalMessage');
+    const iconEl = document.getElementById('confirmModalIcon');
     if (!modal || !titleEl || !messageEl) {
         return Promise.resolve(window.confirm(message));
     }
 
+    const icons = { danger: '⚠️', warning: '⚠️', info: 'ℹ️' };
+    const btnAccept = document.getElementById('confirmModalAccept');
+
     titleEl.textContent = title;
     messageEl.textContent = message;
+    if (iconEl) {
+        iconEl.textContent = icons[tipo] || '⚠️';
+        iconEl.className = `modal-icon ${tipo}`;
+    }
+    if (btnAccept) {
+        btnAccept.className = tipo === 'danger' ? 'btn btn-danger' : 'btn btn-primary';
+    }
     modal.classList.remove('hidden');
 
     return new Promise((resolve) => {
@@ -473,103 +484,85 @@ if (document.getElementById('formConfigAdmin')) {
     });
 }
 
-if (document.getElementById('formGasto')) {
-    document.getElementById('formGasto').addEventListener('submit', async function(e) {
-        e.preventDefault();
+// ========================================
+// MODAL GASTOS (tabs unificados)
+// ========================================
 
-        const nuevoGasto = {
+function abrirModalGasto(tipo = 'mantenimiento') {
+    document.getElementById('modalGasto').classList.remove('hidden');
+    switchGastoTab(tipo);
+    ['formGasto','formGastoLuz','formGastoAgua'].forEach(id => {
+        const f = document.getElementById(id);
+        if (f) f.reset();
+    });
+    ['errorGasto','errorLuz','errorAgua'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+}
+
+function cerrarModalGasto() {
+    document.getElementById('modalGasto').classList.add('hidden');
+}
+
+function switchGastoTab(tipo) {
+    const tabs = { mantenimiento: 'tabMant', luz: 'tabLuz', agua: 'tabAgua' };
+    const panels = { mantenimiento: 'panelMant', luz: 'panelLuz', agua: 'panelAgua' };
+    Object.values(tabs).forEach(id => document.getElementById(id)?.classList.remove('active'));
+    Object.values(panels).forEach(id => document.getElementById(id)?.classList.remove('active'));
+    document.getElementById(tabs[tipo])?.classList.add('active');
+    document.getElementById(panels[tipo])?.classList.add('active');
+    const titulos = { mantenimiento: 'Gasto de Mantenimiento', luz: 'Gasto de Luz', agua: 'Gasto de Agua' };
+    document.getElementById('modalGastoTitulo').textContent = titulos[tipo] || 'Registrar Gasto';
+}
+
+async function submitGasto(event, tipo) {
+    event.preventDefault();
+    const errorIds = { mantenimiento: 'errorGasto', luz: 'errorLuz', agua: 'errorAgua' };
+    const errorEl = document.getElementById(errorIds[tipo]);
+
+    let nuevoGasto;
+    if (tipo === 'mantenimiento') {
+        nuevoGasto = {
             proveedor: document.getElementById('gastoProveedor').value.trim(),
             concepto: document.getElementById('gastoConcepto').value.trim(),
             monto: parseFloat(document.getElementById('gastoMonto').value),
             tipo: 'mantenimiento',
             fecha_registro: document.getElementById('gastoFecha').value
         };
-
-        const { response, data } = await apiFetch('/gastos', {
-            method: 'POST',
-            body: JSON.stringify(nuevoGasto)
-        });
-
-        if (!response.ok) {
-            mostrarMensaje('mensajeGasto', data.error || 'Error al registrar', 'error');
-            return;
-        }
-
-        mostrarMensaje('mensajeGasto', 'Gasto registrado exitosamente', 'success');
-        document.getElementById('formGasto').reset();
-        await cargarGastos();
-        actualizarDashboard();
-
-        setTimeout(() => {
-            cerrarFormulario('agregarGasto');
-        }, 2000);
-    });
-}
-
-if (document.getElementById('formGastoLuz')) {
-    document.getElementById('formGastoLuz').addEventListener('submit', async function(e) {
-        e.preventDefault();
-
-        const nuevoGasto = {
+    } else if (tipo === 'luz') {
+        nuevoGasto = {
             proveedor: 'Luz del Sur',
             concepto: 'Gasto de luz común',
             monto: parseFloat(document.getElementById('gastoLuzMonto').value),
             tipo: 'luz',
             fecha_registro: document.getElementById('gastoLuzFecha').value
         };
-
-        const { response, data } = await apiFetch('/gastos', {
-            method: 'POST',
-            body: JSON.stringify(nuevoGasto)
-        });
-
-        if (!response.ok) {
-            mostrarMensaje('mensajeGastoLuz', data.error || 'Error al registrar', 'error');
-            return;
-        }
-
-        mostrarMensaje('mensajeGastoLuz', 'Gasto de luz registrado', 'success');
-        document.getElementById('formGastoLuz').reset();
-        await cargarGastos();
-        actualizarDashboard();
-
-        setTimeout(() => {
-            cerrarFormulario('agregarGastoLuz');
-        }, 2000);
-    });
-}
-
-if (document.getElementById('formGastoAgua')) {
-    document.getElementById('formGastoAgua').addEventListener('submit', async function(e) {
-        e.preventDefault();
-
-        const nuevoGasto = {
+    } else {
+        nuevoGasto = {
             proveedor: 'Sedapal',
             concepto: 'Gasto de agua',
             monto: parseFloat(document.getElementById('gastoAguaMonto').value),
             tipo: 'agua',
             fecha_registro: document.getElementById('gastoAguaFecha').value
         };
+    }
 
-        const { response, data } = await apiFetch('/gastos', {
-            method: 'POST',
-            body: JSON.stringify(nuevoGasto)
-        });
-
-        if (!response.ok) {
-            mostrarMensaje('mensajeGastoAgua', data.error || 'Error al registrar', 'error');
-            return;
-        }
-
-        mostrarMensaje('mensajeGastoAgua', 'Gasto de agua registrado', 'success');
-        document.getElementById('formGastoAgua').reset();
-        await cargarGastos();
-        actualizarDashboard();
-
-        setTimeout(() => {
-            cerrarFormulario('agregarGastoAgua');
-        }, 2000);
+    const { response, data } = await apiFetch('/gastos', {
+        method: 'POST',
+        body: JSON.stringify(nuevoGasto)
     });
+
+    if (!response.ok) {
+        errorEl.textContent = data.error || 'Error al registrar el gasto.';
+        errorEl.style.display = 'block';
+        return;
+    }
+
+    cerrarModalGasto();
+    showToast('Gasto registrado exitosamente', 'success');
+    await cargarGastos();
+    actualizarDashboard();
 }
 
 function listarGastos() {
