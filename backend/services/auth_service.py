@@ -8,16 +8,35 @@ from security import verify_password, hash_password
 from utils.logger import get_logger
 
 log = get_logger(__name__)
+_sec_log = get_logger("security")
+
+_MSG_INVALIDO = "Usuario o contraseña inválidos"
 
 
 def autenticar(usuario: str, contrasena: str, tipo: str):
     user = usuario_dao.get_usuario_para_auth(usuario)
     if not user or not user["activo"]:
-        return None, "Usuario o contraseña inválidos"
+        _sec_log.warning("Login fallido — usuario no existe o inactivo", extra={
+            "event": "login_failed",
+            "usuario": usuario,
+            "tipo_solicitado": tipo,
+        })
+        return None, _MSG_INVALIDO
     if user["tipo"] != tipo:
-        return None, f"Este usuario es {user['tipo']}, no {tipo}"
+        _sec_log.warning("Login fallido — rol incorrecto", extra={
+            "event": "login_wrong_role",
+            "usuario": usuario,
+            "tipo_real": user["tipo"],
+            "tipo_solicitado": tipo,
+        })
+        return None, _MSG_INVALIDO
     if not verify_password(user["password_hash"], contrasena):
-        return None, "Usuario o contraseña inválidos"
+        _sec_log.warning("Login fallido — contraseña incorrecta", extra={
+            "event": "login_bad_password",
+            "usuario": usuario,
+            "tipo": tipo,
+        })
+        return None, _MSG_INVALIDO
     log.info("Login exitoso", extra={"usuario": usuario, "tipo": tipo})
     return user, None
 
