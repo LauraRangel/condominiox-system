@@ -1253,7 +1253,7 @@ async function exportarMorosidadExcel() {
     const mes = mesInput ? mesInput.value : '';
     const path = mes ? `/reportes/morosidad/excel?mes=${mes}` : '/reportes/morosidad/excel';
     const url = `https://condominiox-system.onrender.com/api${path}`;
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
 
     try {
         const response = await fetch(url, {
