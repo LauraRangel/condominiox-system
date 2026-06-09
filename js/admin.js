@@ -1202,7 +1202,10 @@ async function exportarMorosidadExcel() {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!response.ok) {
-            showToast('Error al generar el reporte Excel', 'error');
+            const errData = await response.json().catch(() => ({}));
+            const msg = errData.error || `Error ${response.status}`;
+            console.error('[Excel export]', msg);
+            showToast(msg, 'error', 'Error exportando Excel');
             return;
         }
         const blob = await response.blob();
