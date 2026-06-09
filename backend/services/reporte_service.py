@@ -116,10 +116,14 @@ def exportar_morosidad_excel(mes: str = "", limit: int = 100) -> bytes:
     ws.cell(row=sum_row + 1, column=1, value="DEUDA TOTAL (S/)").font = Font(bold=True)
     ws.cell(row=sum_row + 1, column=2, value=round(sum(i.get("saldo", 0) for i in items), 2))
 
-    # Ajustar ancho de columnas
+    # Ajustar ancho de columnas (saltar MergedCells que no tienen column_letter)
     for col in ws.columns:
-        max_len = max((len(str(cell.value or "")) for cell in col), default=10)
-        ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 40)
+        try:
+            letter = col[0].column_letter
+        except AttributeError:
+            continue
+        max_len = max((len(str(cell.value or "")) for cell in col if hasattr(cell, 'value')), default=10)
+        ws.column_dimensions[letter].width = min(max_len + 4, 40)
 
     buf = io.BytesIO()
     wb.save(buf)
