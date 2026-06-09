@@ -380,7 +380,7 @@ async function cargarComunicados() {
     if (!contenedor) return;
     contenedor.innerHTML = '<p class="empty-state">Cargando...</p>';
 
-    const propietarioId = JSON.parse(localStorage.getItem('user') || '{}').propietario_id;
+    const propietarioId = getUserData()?.propietario_id;
     if (!propietarioId) return;
 
     const { response, data } = await apiFetch('/comunicados');
