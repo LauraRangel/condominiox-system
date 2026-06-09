@@ -112,6 +112,54 @@ function formatCurrency(amount) {
     return `S/ ${parseFloat(amount).toFixed(2)}`;
 }
 
+// ========================================
+// CONFIRM MODAL (compartido admin + propietario)
+// ========================================
+let confirmModalResolver = null;
+
+function cerrarConfirmModal(accepted) {
+    const modal = document.getElementById('confirmModal');
+    if (modal) modal.classList.add('hidden');
+    if (confirmModalResolver) {
+        confirmModalResolver(accepted);
+        confirmModalResolver = null;
+    }
+}
+
+function confirmModal(message, title = 'Confirmar acción', tipo = 'danger') {
+    const modal = document.getElementById('confirmModal');
+    const titleEl = document.getElementById('confirmModalTitle');
+    const messageEl = document.getElementById('confirmModalMessage');
+    const iconEl = document.getElementById('confirmModalIcon');
+    if (!modal || !titleEl || !messageEl) {
+        return Promise.resolve(window.confirm(message));
+    }
+
+    const icons = { danger: '⚠️', warning: '⚠️', info: 'ℹ️' };
+    const btnAccept = document.getElementById('confirmModalAccept');
+    const btnCancel = document.getElementById('confirmModalCancel');
+
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    if (iconEl) {
+        iconEl.textContent = icons[tipo] || '⚠️';
+        iconEl.className = `modal-icon ${tipo}`;
+    }
+    if (btnAccept) {
+        btnAccept.className = tipo === 'danger' ? 'btn btn-danger' : 'btn btn-primary';
+        btnAccept.onclick = () => cerrarConfirmModal(true);
+    }
+    if (btnCancel) {
+        btnCancel.onclick = () => cerrarConfirmModal(false);
+    }
+    modal.onclick = (e) => { if (e.target === modal) cerrarConfirmModal(false); };
+    modal.classList.remove('hidden');
+
+    return new Promise((resolve) => {
+        confirmModalResolver = resolve;
+    });
+}
+
 // Toast notifications
 function showToast(message, type = 'info', title = '') {
     let container = document.getElementById('toast-container');

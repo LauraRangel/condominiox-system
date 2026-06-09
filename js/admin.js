@@ -4,7 +4,6 @@ let recibos = [];
 let currentRecibosView = 'pendientes';
 let currentMesFilter = '';
 let editingPropietarioId = null;
-let confirmModalResolver = null;
 let filtroPropietarioTexto = '';
 let filtroPropietarioTorre = '';
 let filtroPropietarioPiso = '';
@@ -107,55 +106,6 @@ function obtenerSiguienteId(items, campo = 'id') {
     return Math.max(...items.map(item => item[campo])) + 1;
 }
 
-function inicializarConfirmModal() {
-    const modal = document.getElementById('confirmModal');
-    const btnCancel = document.getElementById('confirmModalCancel');
-    const btnAccept = document.getElementById('confirmModalAccept');
-    if (!modal || !btnCancel || !btnAccept) return;
-
-    btnCancel.addEventListener('click', () => cerrarConfirmModal(false));
-    btnAccept.addEventListener('click', () => cerrarConfirmModal(true));
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) cerrarConfirmModal(false);
-    });
-}
-
-function cerrarConfirmModal(accepted) {
-    const modal = document.getElementById('confirmModal');
-    if (modal) modal.classList.add('hidden');
-    if (confirmModalResolver) {
-        confirmModalResolver(accepted);
-        confirmModalResolver = null;
-    }
-}
-
-function confirmModal(message, title = 'Confirmar acción', tipo = 'danger') {
-    const modal = document.getElementById('confirmModal');
-    const titleEl = document.getElementById('confirmModalTitle');
-    const messageEl = document.getElementById('confirmModalMessage');
-    const iconEl = document.getElementById('confirmModalIcon');
-    if (!modal || !titleEl || !messageEl) {
-        return Promise.resolve(window.confirm(message));
-    }
-
-    const icons = { danger: '⚠️', warning: '⚠️', info: 'ℹ️' };
-    const btnAccept = document.getElementById('confirmModalAccept');
-
-    titleEl.textContent = title;
-    messageEl.textContent = message;
-    if (iconEl) {
-        iconEl.textContent = icons[tipo] || '⚠️';
-        iconEl.className = `modal-icon ${tipo}`;
-    }
-    if (btnAccept) {
-        btnAccept.className = tipo === 'danger' ? 'btn btn-danger' : 'btn btn-primary';
-    }
-    modal.classList.remove('hidden');
-
-    return new Promise((resolve) => {
-        confirmModalResolver = resolve;
-    });
-}
 
 // ========================================
 // DASHBOARD
@@ -1059,7 +1009,6 @@ if (document.getElementById('formCambiarContrasena')) {
 // ========================================
 
 window.addEventListener('DOMContentLoaded', function() {
-    inicializarConfirmModal();
     limpiarFormularioPropietario();
     const fechaInput = document.getElementById('fechaRecibos');
     if (fechaInput && !fechaInput.value) {
