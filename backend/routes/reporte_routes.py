@@ -3,8 +3,10 @@ import io
 
 from middleware import get_payload, require_roles, auth_response
 from services import reporte_service
+from utils.logger import get_logger
 
 bp = Blueprint("reportes", __name__)
+log = get_logger(__name__)
 
 
 @bp.get("/api/reportes/financiero")
@@ -38,8 +40,9 @@ def exportar_morosidad_excel():
 
     try:
         xlsx_bytes = reporte_service.exportar_morosidad_excel(mes, limit)
-    except RuntimeError as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        log.error("Error generando Excel morosidad", extra={"error": str(e), "tipo": type(e).__name__})
+        return jsonify({"error": f"Error al generar el reporte: {type(e).__name__}: {e}"}), 500
 
     filename = f"morosidad_{mes or 'todos'}.xlsx"
     return send_file(
