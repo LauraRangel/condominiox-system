@@ -69,25 +69,37 @@ if (document.getElementById('loginForm')) {
 }
 
 // Función para cerrar sesión
-function cerrarSesion() {
-    if (confirm('¿Está seguro que desea cerrar sesión?')) {
+async function cerrarSesion() {
+    const usar = typeof confirmModal === 'function' ? confirmModal : (msg) => Promise.resolve(window.confirm(msg));
+    const ok = await usar('¿Está seguro que desea cerrar sesión?', 'Cerrar sesión');
+    if (ok) {
         removeAuthToken();
-        window.location.href = 'index.html';
+        window.location.replace('index.html');
     }
 }
 
-// Verificar autenticación en páginas protegidas
-if (window.location.pathname.includes('admin.html') ||
-    window.location.pathname.includes('propietario.html')) {
+// Verificar autenticación y rol en páginas protegidas
+if (window.location.pathname.includes('admin.html')) {
     requireAuth();
-
-    // Mostrar nombre del usuario
-    const userData = getUserData();
-    if (userData) {
+    const _userData = getUserData();
+    if (!_userData || _userData.tipo !== 'Administrador') {
+        removeAuthToken();
+        window.location.replace('index.html');
+    } else {
         const userNameElement = document.getElementById('userName');
-        if (userNameElement) {
-            userNameElement.textContent = userData.usuario;
-        }
+        if (userNameElement) userNameElement.textContent = _userData.usuario;
+    }
+}
+
+if (window.location.pathname.includes('propietario.html')) {
+    requireAuth();
+    const _userData = getUserData();
+    if (!_userData || _userData.tipo !== 'Propietario') {
+        removeAuthToken();
+        window.location.replace('index.html');
+    } else {
+        const userNameElement = document.getElementById('userName');
+        if (userNameElement) userNameElement.textContent = _userData.usuario;
     }
 }
 
