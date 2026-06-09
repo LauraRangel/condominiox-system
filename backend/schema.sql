@@ -52,3 +52,20 @@ CREATE TABLE IF NOT EXISTS recibos (
     fecha_pago DATE,
     pagado BOOLEAN DEFAULT FALSE
 );
+
+CREATE TABLE IF NOT EXISTS anuncios (
+    id SERIAL PRIMARY KEY,
+    titulo VARCHAR(200) NOT NULL,
+    contenido TEXT NOT NULL,
+    tipo VARCHAR(30) NOT NULL CHECK (tipo IN ('mantenimiento','pago','informativo')),
+    fecha_publicacion DATE NOT NULL DEFAULT CURRENT_DATE,
+    activo BOOLEAN DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS lecturas_anuncios (
+    id SERIAL PRIMARY KEY,
+    anuncio_id INTEGER NOT NULL REFERENCES anuncios(id) ON DELETE CASCADE,
+    propietario_id INTEGER NOT NULL REFERENCES propietarios(id) ON DELETE CASCADE,
+    fecha_lectura TIMESTAMP DEFAULT NOW(),
+    UNIQUE(anuncio_id, propietario_id)
+);

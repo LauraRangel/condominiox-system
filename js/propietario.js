@@ -300,6 +300,9 @@ function cargarDatosSeccion(seccionId) {
         case 'pagados':
             cargarRecibosPagados();
             break;
+        case 'comunicados':
+            cargarComunicados();
+            break;
     }
 }
 
@@ -319,3 +322,144 @@ document.querySelectorAll('.sidebar-nav .nav-item').forEach(btn => {
 window.addEventListener('DOMContentLoaded', function() {
     cargarInformacionPersonal();
 });
+
+// ========================================
+// CU12 — FILTRO HISTORIAL DE PAGOS
+// ========================================
+
+async function filtrarPagadosPorMes() {
+    const mes = (document.getElementById('filtroMesPagados')?.value || '').trim();
+    if (!mes) {
+        renderTablaRecibosPagados(recibosPagados);
+        return;
+    }
+    const filtrados = recibosPagados.filter(r => (r.fecha_emision || '').slice(0, 7) === mes);
+    renderTablaRecibosPagados(filtrados);
+}
+
+function limpiarFiltroPagados() {
+    const inp = document.getElementById('filtroMesPagados');
+    if (inp) inp.value = '';
+    renderTablaRecibosPagados(recibosPagados);
+}
+
+function renderTablaRecibosPagados(items) {
+    const tbody = document.getElementById('tablaRecibosPagados');
+    if (!tbody) return;
+    if (!items.length) {
+        tbody.innerHTML = `<tr><td colspan="10" class="empty-state">No hay recibos pagados</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = items.map(r => `
+        <tr>
+            <td>${r.id}</td>
+            <td>${(r.fecha_emision || '').slice(0, 7)}</td>
+            <td>S/ ${(+r.total).toFixed(2)}</td>
+            <td>S/ ${(+(r.monto_pagado || 0)).toFixed(2)}</td>
+            <td>S/ ${(+(r.saldo || 0)).toFixed(2)}</td>
+            <td>${r.fecha_pago || '-'}</td>
+            <td>S/ ${(+(r.monto_administracion || 0)).toFixed(2)}</td>
+            <td>S/ ${(+(r.monto_agua || 0)).toFixed(2)}</td>
+            <td>S/ ${(+(r.monto_luz || 0)).toFixed(2)}</td>
+            <td>S/ ${(+(r.monto_mantenimiento || 0)).toFixed(2)}</td>
+        </tr>
+    `).join('');
+}
+
+// ========================================
+// CU13 — COMUNICADOS (propietario)
+// ========================================
+
+let _todosComunicados = [];
+
+const TIPO_LABEL = { informativo: 'Informativo', pago: 'Pago', mantenimiento: 'Mantenimiento' };
+const TIPO_COLOR = { informativo: '#dbeafe:#1e40af', pago: '#fef3c7:#92400e', mantenimiento: '#dcfce7:#166534' };
+
+async function cargarComunicados() {
+    const contenedor = document.getElementById('contenedorComunicados');
+    if (!contenedor) return;
+    contenedor.innerHTML = '<p class="empty-state">Cargando...</p>';
+
+    const propietarioId = JSON.parse(localStorage.getItem('user') || '{}').propietario_id;
+    if (!propietarioId) return;
+
+    const { response, data } = await apiFetch('/comunicados');
+    if (!response.ok) {
+        contenedor.innerHTML = '<p class="empty-state">Error al cargar comunicados</p>';
+        return;
+    }
+    _todosComunicados = data.items || [];
+    _actualizarBadgeComunicados(_todosComunicados);
+    filtrarComunicados();
+}
+
+function _actualizarBadgeComunicados(items) {
+    const badge = document.getElementById('badgeComunicados');
+    if (!badge) return;
+    const noLeidos = items.filter(c => !c.leido).length;
+    if (noLeidos > 0) {
+        badge.textContent = noLeidos;
+        badge.classList.remove('hidden');
+    } else {
+        badge.classList.add('hidden');
+    }
+}
+
+function filtrarComunicados() {
+    const tipo = document.getElementById('filtroTipoComunicado')?.value || '';
+    const estado = document.getElementById('filtroEstadoComunicado')?.value || '';
+
+    let filtrados = _todosComunicados;
+    if (tipo) filtrados = filtrados.filter(c => c.tipo === tipo);
+    if (estado === 'sin_leer') filtrados = filtrados.filter(c => !c.leido);
+    if (estado === 'leido') filtrados = filtrados.filter(c => c.leido);
+
+    _renderComunicados(filtrados);
+}
+
+function limpiarFiltroComunicados() {
+    const tipoEl = document.getElementById('filtroTipoComunicado');
+    const estadoEl = document.getElementById('filtroEstadoComunicado');
+    if (tipoEl) tipoEl.value = '';
+    if (estadoEl) estadoEl.value = '';
+    _renderComunicados(_todosComunicados);
+}
+
+function _renderComunicados(items) {
+    const contenedor = document.getElementById('contenedorComunicados');
+    if (!contenedor) return;
+    if (!items.length) {
+        contenedor.innerHTML = '<p class="empty-state">No hay comunicados disponibles</p>';
+        return;
+    }
+    contenedor.innerHTML = items.map(c => {
+        const [bg, color] = (TIPO_COLOR[c.tipo] || '#f3f4f6:#374151').split(':');
+        const leido = c.leido;
+        return `
+        <div style="border:1px solid ${leido ? '#e5e7eb' : '#3b82f6'};border-left:4px solid ${leido ? '#d1d5db' : '#2563eb'};border-radius:8px;padding:1rem;margin-bottom:0.75rem;background:${leido ? '#fff' : '#eff6ff'};">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem;">
+                <div>
+                    <span style="background:${bg};color:${color};padding:2px 8px;border-radius:12px;font-size:0.8rem;">${TIPO_LABEL[c.tipo] || c.tipo}</span>
+                    ${!leido ? '<span style="background:#dc2626;color:white;padding:2px 8px;border-radius:12px;font-size:0.8rem;margin-left:4px;">Nuevo</span>' : ''}
+                    <h4 style="margin:0.5rem 0 0.25rem 0;">${c.titulo}</h4>
+                </div>
+                <div style="text-align:right;">
+                    <small style="color:#6b7280;">${c.fecha_publicacion || ''}</small>
+                    ${!leido ? `<br><button class="btn btn-secondary btn-sm" style="margin-top:4px;" onclick="marcarLeido(${c.id})">Marcar leído</button>` : '<br><small style="color:#16a34a;">✓ Leído</small>'}
+                </div>
+            </div>
+            <p style="margin:0.5rem 0 0 0;color:#374151;">${c.contenido}</p>
+        </div>
+        `;
+    }).join('');
+}
+
+async function marcarLeido(anuncioId) {
+    const { response } = await apiFetch(`/comunicados/${anuncioId}/leer`, { method: 'POST' });
+    if (response.ok) {
+        const item = _todosComunicados.find(c => c.id === anuncioId);
+        if (item) item.leido = true;
+        _actualizarBadgeComunicados(_todosComunicados);
+        filtrarComunicados();
+    }
+}

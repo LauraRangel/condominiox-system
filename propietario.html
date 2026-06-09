@@ -31,6 +31,10 @@
                     <span class="nav-icon">✅</span>
                     <span>Recibos Pagados</span>
                 </button>
+                <button class="nav-item" data-section="comunicados" onclick="mostrarSeccion('comunicados', this)">
+                    <span class="nav-icon">📢</span>
+                    <span>Comunicados <span id="badgeComunicados" class="hidden" style="background:#dc2626;color:white;border-radius:10px;padding:1px 6px;font-size:0.75rem;margin-left:4px;">0</span></span>
+                </button>
                 <button class="nav-item" data-section="perfil" onclick="mostrarSeccion('perfil', this)">
                     <span class="nav-icon">⚙️</span>
                     <span>Mi Perfil</span>
@@ -147,11 +151,21 @@
                 </div>
             </section>
 
-            <!-- Recibos Pagados -->
+            <!-- Recibos Pagados CU12 -->
             <section id="pagados-section" class="panel-section">
                 <div class="section-header">
                     <h2>Historial de Pagos</h2>
                     <p>Recibos que ya han sido pagados</p>
+                </div>
+
+                <!-- Filtro por mes CU12 -->
+                <div class="recibos-control-card" style="margin-bottom:1rem;">
+                    <div class="recibos-search-title">Filtrar por Mes</div>
+                    <div class="recibos-inline-group">
+                        <label for="filtroMesPagados">Mes</label>
+                        <input type="month" id="filtroMesPagados" class="input-inline" onchange="filtrarPagadosPorMes()">
+                        <button class="btn btn-secondary btn-sm" onclick="limpiarFiltroPagados()">Limpiar</button>
+                    </div>
                 </div>
 
                 <div class="data-table-container">
@@ -176,6 +190,38 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+            </section>
+
+            <!-- Comunicados CU13 -->
+            <section id="comunicados-section" class="panel-section">
+                <div class="section-header">
+                    <h2>Comunicados</h2>
+                    <p>Anuncios e información del condominio</p>
+                </div>
+
+                <div class="recibos-control-card" style="margin-bottom:1rem;">
+                    <div class="recibos-search-title">Filtrar</div>
+                    <div class="recibos-inline-group">
+                        <label for="filtroTipoComunicado">Tipo</label>
+                        <select id="filtroTipoComunicado" class="input-inline" onchange="filtrarComunicados()">
+                            <option value="">Todos</option>
+                            <option value="informativo">Informativo</option>
+                            <option value="pago">Pago</option>
+                            <option value="mantenimiento">Mantenimiento</option>
+                        </select>
+                        <label for="filtroEstadoComunicado">Estado</label>
+                        <select id="filtroEstadoComunicado" class="input-inline" onchange="filtrarComunicados()">
+                            <option value="">Todos</option>
+                            <option value="sin_leer">Sin leer</option>
+                            <option value="leido">Leído</option>
+                        </select>
+                        <button class="btn btn-secondary btn-sm" onclick="limpiarFiltroComunicados()">Limpiar</button>
+                    </div>
+                </div>
+
+                <div id="contenedorComunicados">
+                    <p class="empty-state">Cargando comunicados...</p>
                 </div>
             </section>
 

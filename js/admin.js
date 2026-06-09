@@ -233,6 +233,7 @@ function listarPropietarios(items = propietarios) {
             <td>${prop.telefono || '-'}</td>
             <td>
                 <div class="propietario-actions">
+                    <button class="btn btn-info btn-sm" onclick="verEstadoCuenta(${prop.id}, '${prop.nombre} ${prop.apellido}')">Cuenta</button>
                     <button class="btn btn-secondary btn-sm" onclick="editarPropietario(${prop.id})">Editar</button>
                     <button class="btn btn-danger btn-sm" onclick="eliminarPropietario(${prop.id})">Eliminar</button>
                 </div>
@@ -1079,3 +1080,195 @@ window.addEventListener('DOMContentLoaded', function() {
     setRecibosVista('pendientes');
     cargarTopMorosos();
 });
+
+// ========================================
+// CU13 — ANUNCIOS
+// ========================================
+
+async function cargarAnuncios() {
+    const { response, data } = await apiFetch('/anuncios');
+    const tbody = document.getElementById('tablaAnuncios');
+    if (!tbody) return;
+    if (!response.ok) {
+        tbody.innerHTML = `<tr><td colspan="5" class="empty-state">Error al cargar</td></tr>`;
+        return;
+    }
+    const items = data.items || [];
+    if (!items.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No hay anuncios publicados</td></tr>`;
+        return;
+    }
+    const tipoLabel = { informativo: 'Informativo', pago: 'Pago', mantenimiento: 'Mantenimiento' };
+    tbody.innerHTML = items.map(a => `
+        <tr>
+            <td>${a.id}</td>
+            <td>${a.titulo}</td>
+            <td><span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:12px;font-size:0.82rem;">${tipoLabel[a.tipo] || a.tipo}</span></td>
+            <td>${a.fecha_publicacion || ''}</td>
+            <td>
+                <button class="btn btn-danger btn-sm" onclick="eliminarAnuncio(${a.id})">Eliminar</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function abrirFormAnuncio() {
+    document.getElementById('formAgregarAnuncio').classList.remove('hidden');
+    document.getElementById('formAnuncio').reset();
+    document.getElementById('mensajeAnuncio').textContent = '';
+}
+
+function cerrarFormAnuncio() {
+    document.getElementById('formAgregarAnuncio').classList.add('hidden');
+}
+
+async function crearAnuncio(event) {
+    event.preventDefault();
+    const titulo = document.getElementById('anuncioTitulo').value.trim();
+    const contenido = document.getElementById('anuncioContenido').value.trim();
+    const tipo = document.getElementById('anuncioTipo').value;
+    const msgEl = document.getElementById('mensajeAnuncio');
+
+    const { response, data } = await apiFetch('/anuncios', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ titulo, contenido, tipo }),
+    });
+
+    if (response.ok) {
+        msgEl.textContent = 'Anuncio publicado correctamente';
+        msgEl.style.color = 'green';
+        setTimeout(() => { cerrarFormAnuncio(); cargarAnuncios(); }, 1000);
+    } else {
+        msgEl.textContent = data.error || 'Error al publicar';
+        msgEl.style.color = 'red';
+    }
+}
+
+async function eliminarAnuncio(id) {
+    if (!await confirmModal('¿Eliminar este anuncio?', 'Eliminar Anuncio')) return;
+    const { response } = await apiFetch(`/anuncios/${id}`, { method: 'DELETE' });
+    if (response.ok) cargarAnuncios();
+}
+
+// ========================================
+// CU11 — ESTADO DE CUENTA (modal admin)
+// ========================================
+
+let _estadoCuentaPropietarioId = null;
+
+async function verEstadoCuenta(propietarioId, nombre) {
+    _estadoCuentaPropietarioId = propietarioId;
+    document.getElementById('modalEstadoCuentaTitulo').textContent = `Estado de Cuenta — ${nombre}`;
+    document.getElementById('estadoCuentaDesde').value = '';
+    document.getElementById('estadoCuentaHasta').value = '';
+    document.getElementById('modalEstadoCuenta').classList.remove('hidden');
+    await _cargarTablaEstadoCuenta(propietarioId, '', '');
+}
+
+function cerrarModalEstadoCuenta(event) {
+    if (event && event.target !== document.getElementById('modalEstadoCuenta')) return;
+    document.getElementById('modalEstadoCuenta').classList.add('hidden');
+    _estadoCuentaPropietarioId = null;
+}
+
+async function filtrarEstadoCuenta() {
+    const desde = document.getElementById('estadoCuentaDesde').value;
+    const hasta = document.getElementById('estadoCuentaHasta').value;
+    if (_estadoCuentaPropietarioId) {
+        await _cargarTablaEstadoCuenta(_estadoCuentaPropietarioId, desde, hasta);
+    }
+}
+
+async function _cargarTablaEstadoCuenta(propietarioId, desde, hasta) {
+    const tbody = document.getElementById('tablaEstadoCuenta');
+    tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Cargando...</td></tr>';
+    let url = `/propietarios/${propietarioId}/estado-cuenta`;
+    const params = [];
+    if (desde) params.push(`desde=${desde}`);
+    if (hasta) params.push(`hasta=${hasta}`);
+    if (params.length) url += '?' + params.join('&');
+
+    const { response, data } = await apiFetch(url);
+    if (!response.ok) {
+        tbody.innerHTML = `<tr><td colspan="9" class="empty-state">Error al cargar</td></tr>`;
+        return;
+    }
+    const items = data.items || [];
+    if (!items.length) {
+        tbody.innerHTML = `<tr><td colspan="9" class="empty-state">Sin recibos en el período</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = items.map(r => `
+        <tr>
+            <td>${(r.fecha_emision || '').slice(0, 7)}</td>
+            <td>S/ ${(+r.monto_administracion).toFixed(2)}</td>
+            <td>S/ ${(+r.monto_agua).toFixed(2)}</td>
+            <td>S/ ${(+r.monto_luz).toFixed(2)}</td>
+            <td>S/ ${(+r.monto_mantenimiento).toFixed(2)}</td>
+            <td>S/ ${(+r.total).toFixed(2)}</td>
+            <td>S/ ${(+r.monto_pagado).toFixed(2)}</td>
+            <td>S/ ${(+r.saldo).toFixed(2)}</td>
+            <td><span style="color:${r.pagado ? '#16a34a' : '#dc2626'}">${r.pagado ? 'Pagado' : 'Pendiente'}</span></td>
+        </tr>
+    `).join('');
+}
+
+// ========================================
+// CU14 — ESTADO FINANCIERO RESUMIDO
+// ========================================
+
+async function cargarResumenFinanciero() {
+    const mes = document.getElementById('filtroMesFinanciero').value;
+    const url = mes ? `/reportes/financiero?mes=${mes}` : '/reportes/financiero';
+    const { response, data } = await apiFetch(url);
+    if (!response.ok) return;
+
+    document.getElementById('financieroEmitido').textContent = `S/ ${(+data.total_emitido).toFixed(2)}`;
+    document.getElementById('financieroCobrado').textContent = `S/ ${(+data.total_cobrado).toFixed(2)}`;
+    document.getElementById('financieroPendiente').textContent = `S/ ${(+data.saldo_pendiente).toFixed(2)}`;
+    document.getElementById('financieroCobranza').textContent = `${data.porcentaje_cobranza}%`;
+
+    const desglose = data.desglose || {};
+    const tbody = document.getElementById('tablaDesgloseConceptos');
+    const filas = [
+        ['Administración', desglose.administracion],
+        ['Agua', desglose.agua],
+        ['Luz', desglose.luz],
+        ['Mantenimiento', desglose.mantenimiento],
+    ];
+    tbody.innerHTML = filas.map(([nombre, monto]) => `
+        <tr><td>${nombre}</td><td>S/ ${(+(monto || 0)).toFixed(2)}</td></tr>
+    `).join('');
+}
+
+// ========================================
+// CU15 — EXPORTAR MOROSIDAD EXCEL
+// ========================================
+
+async function exportarMorosidadExcel() {
+    const mesInput = document.getElementById('filtroMes');
+    const mes = mesInput ? mesInput.value : '';
+    const url = (mes ? `/reportes/morosidad/excel?mes=${mes}` : '/reportes/morosidad/excel');
+    const token = localStorage.getItem('token');
+
+    try {
+        const response = await fetch(`${window.API_BASE || ''}${url}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) {
+            alert('Error al generar el reporte Excel');
+            return;
+        }
+        const blob = await response.blob();
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `morosidad_${mes || 'todos'}.xlsx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+    } catch (e) {
+        alert('Error de conexión al generar el reporte');
+    }
+}
