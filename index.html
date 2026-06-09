@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="CondominioX - Sistema de Gestión Inteligente de Condominio">
     <title>CondominioX - Gestión Inteligente</title>
-    <link rel="stylesheet" href="css/styles.css?v=20260306">
+    <link rel="stylesheet" href="css/styles.css?v=20260609">
 </head>
 <body>
     <div class="app-container">
@@ -139,12 +139,14 @@
                             <h3>Administrador</h3>
                         </div>
                         <ul class="feature-list">
-                            <li><span class="check">✓</span> Gestión de Propietarios</li>
-                            <li><span class="check">✓</span> Generar Recibos</li>
-                            <li><span class="check">✓</span> Registrar Gastos</li>
-                            <li><span class="check">✓</span> Reportes y Estadísticas</li>
-                            <li><span class="check">✓</span> Configuración del Sistema</li>
-                            <li><span class="check">✓</span> Cambiar Contraseña</li>
+                            <li><span class="check">✓</span> Gestión completa de propietarios</li>
+                            <li><span class="check">✓</span> Registro de gastos (mantenimiento, luz, agua)</li>
+                            <li><span class="check">✓</span> Generación y recalculo de recibos</li>
+                            <li><span class="check">✓</span> Estado de cuenta por propietario</li>
+                            <li><span class="check">✓</span> Estado financiero mensual con desglose</li>
+                            <li><span class="check">✓</span> Ranking de morosos y exportación Excel</li>
+                            <li><span class="check">✓</span> Publicación de comunicados con caducidad</li>
+                            <li><span class="check">✓</span> Configuración del monto de administración</li>
                         </ul>
                     </div>
 
@@ -154,11 +156,12 @@
                             <h3>Propietario</h3>
                         </div>
                         <ul class="feature-list">
-                            <li><span class="check">✓</span> Ver Recibos Propios</li>
-                            <li><span class="check">✓</span> Pagar Recibos</li>
-                            <li><span class="check">✓</span> Historial de Pagos</li>
-                            <li><span class="check">✓</span> Ver Estado de Cuenta</li>
-                            <li><span class="check">✓</span> Cambiar Contraseña</li>
+                            <li><span class="check">✓</span> Consulta de datos personales y unidad</li>
+                            <li><span class="check">✓</span> Pago parcial o total de recibos</li>
+                            <li><span class="check">✓</span> Historial de pagos filtrado por mes</li>
+                            <li><span class="check">✓</span> Comunicados del condominio</li>
+                            <li><span class="check">✓</span> Edición de correo y teléfono</li>
+                            <li><span class="check">✓</span> Cambio de contraseña seguro</li>
                         </ul>
                     </div>
                 </div>
@@ -177,11 +180,12 @@
                             <img src="img/logo.png" alt="CondominioX Logo">
                         </div>
                         <h3>CondominioX</h3>
-                        <p class="version">Versión 1.0</p>
+                        <p class="version">Versión 5.0 — Junio 2026</p>
                         <p class="about-description">
-                            Sistema integral de gestión de condominios que permite administrar
-                            propietarios, generar recibos, registrar gastos y facilitar el pago
-                            de cuotas de mantenimiento de manera eficiente y segura.
+                            Sistema web integral para la gestión de condominios residenciales.
+                            Administra propietarios, gastos comunes, recibos con pagos parciales,
+                            comunicados y reportes en Excel. Arquitectura MVC + DAO con
+                            autenticación JWT, estructuras de datos académicas y seguridad por roles.
                         </p>
                     </div>
 
@@ -190,28 +194,42 @@
                             <span class="about-feature-icon">🛡️</span>
                             <div>
                                 <h4>Seguridad</h4>
-                                <p>Protección de datos y acceso controlado por roles</p>
+                                <p>JWT stateless, control de roles, logging de accesos no autorizados</p>
                             </div>
                         </div>
                         <div class="about-feature-item">
-                            <span class="about-feature-icon">⚡</span>
+                            <span class="about-feature-icon">🏗️</span>
                             <div>
-                                <h4>Rapidez</h4>
-                                <p>Interfaz intuitiva y procesos optimizados</p>
+                                <h4>Arquitectura MVC + DAO</h4>
+                                <p>Backend Flask estructurado con principios SOLID y capas separadas</p>
                             </div>
                         </div>
                         <div class="about-feature-item">
                             <span class="about-feature-icon">📊</span>
                             <div>
                                 <h4>Reportes</h4>
-                                <p>Informes detallados y estadísticas en tiempo real</p>
+                                <p>Estado financiero mensual y exportación de morosidad a Excel</p>
                             </div>
                         </div>
                         <div class="about-feature-item">
                             <span class="about-feature-icon">💳</span>
                             <div>
-                                <h4>Pagos</h4>
-                                <p>Gestión completa de cobros y pagos</p>
+                                <h4>Pagos parciales</h4>
+                                <p>Registro de pagos con distribución automática FIFO a gastos</p>
+                            </div>
+                        </div>
+                        <div class="about-feature-item">
+                            <span class="about-feature-icon">📢</span>
+                            <div>
+                                <h4>Comunicados</h4>
+                                <p>Anuncios con fecha de caducidad visibles para propietarios</p>
+                            </div>
+                        </div>
+                        <div class="about-feature-item">
+                            <span class="about-feature-icon">🌐</span>
+                            <div>
+                                <h4>Despliegue cloud</h4>
+                                <p>Frontend en GitHub Pages · Backend en Render · PostgreSQL</p>
                             </div>
                         </div>
                     </div>
