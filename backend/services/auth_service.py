@@ -42,7 +42,7 @@ def autenticar(usuario: str, contrasena: str, tipo: str):
 
 
 def generar_token(user: dict) -> str:
-    now = dt.datetime.utcnow()
+    now = dt.datetime.now(dt.timezone.utc)
     payload = {
         "sub": str(user["id"]),
         "usuario": user["usuario"],
