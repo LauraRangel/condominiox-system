@@ -239,7 +239,56 @@ Al iniciar `app.py` se ejecutan:
 
 ---
 
-## 9. Variables de Entorno (Backend)
+## 9. Testing
+
+### Suite de pruebas (`backend/tests/`)
+
+| Tipo | Ubicación | Qué cubre | Requiere DB |
+|---|---|---|---|
+| Unitarias | `tests/unit/` | `structures.py` (BST, AVL, cola de prioridad, lista, matriz), `utils/money.py` (redondeo `Decimal`), `security.py` (hash/verify password) | No |
+| Integración | `tests/integration/` | Rutas Flask reales vía `test_client()`: login, middleware JWT (token ausente/inválido/expirado), control de roles, CRUD de propietarios | Sí (Postgres) |
+
+Cobertura actual: **100%** en `structures.py`, `utils/money.py` y `security.py`. Total: 90 tests (70 unitarias + 20 integración).
+
+### Correr en local
+
+```bash
+cd backend
+.venv/bin/pip install -r requirements-dev.txt
+
+# Solo unitarias (no requieren base de datos)
+.venv/bin/pytest tests/unit -v
+
+# Integración: requiere Postgres corriendo con el schema aplicado.
+# Ejemplo con podman/docker, puerto 5439:
+podman run -d --name condominiox-postgres-test \
+  -e POSTGRES_USER=test -e POSTGRES_PASSWORD=test -e POSTGRES_DB=condominiox_test \
+  -p 5439:5432 postgres:16
+podman exec -i condominiox-postgres-test psql -U test -d condominiox_test < schema.sql
+
+cp .env.test.example .env.test   # ajustar si el puerto es distinto
+.venv/bin/pytest tests/integration -v
+
+# Todo junto + cobertura
+.venv/bin/pytest --cov=. --cov-report=term-missing
+```
+
+`backend/.env.test` no se versiona (está en `.gitignore`); `backend/.env.test.example` sí, como plantilla.
+
+### Pipeline de CI (GitHub Actions)
+
+| Workflow | Dispara en | Qué hace |
+|---|---|---|
+| `.github/workflows/tests.yml` | push/PR a `main` | Levanta Postgres 16 como *service container*, aplica `schema.sql`, corre `pytest --cov=.` (unit + integración) |
+| `.github/workflows/codeql.yml` | push/PR a `main`, semanal | Análisis estático de seguridad (SAST) para Python y JS/TS |
+| `.github/workflows/dependency-review.yml` | PR a `main` | Falla el PR si el diff introduce una dependencia con CVE de severidad alta/crítica |
+| `.github/dependabot.yml` | semanal | Abre PRs automáticos de actualización para dependencias pip y GitHub Actions |
+
+`Dependabot` y `Dependency Review` son complementarios: Dependabot mantiene las dependencias al día con el tiempo; Dependency Review es un gate que bloquea en el momento en que alguien introduce una dependencia nueva vulnerable, dentro del mismo PR.
+
+---
+
+## 10. Variables de Entorno (Backend)
 
 | Variable | Descripción | Requerida |
 |---|---|---|
@@ -247,9 +296,11 @@ Al iniciar `app.py` se ejecutan:
 | `JWT_SECRET` | Clave para firmar tokens | Sí |
 | `JWT_EXPIRES_SECONDS` | Tiempo de vida del token (default: 86400) | No |
 
+Para tests (`backend/.env.test`, no versionado): mismas variables apuntando a un Postgres de prueba. Ver `backend/.env.test.example`.
+
 ---
 
-## 10. Despliegue
+## 11. Despliegue
 
 | Componente | Plataforma |
 |---|---|
@@ -261,11 +312,12 @@ Al iniciar `app.py` se ejecutan:
 
 ---
 
-## 11. Referencias internas
+## 12. Referencias internas
 
 - [backend/structures.py](backend/structures.py) — Estructuras de datos
 - [backend/app.py](backend/app.py) — Init y migraciones
 - [backend/middleware.py](backend/middleware.py) — Auth y seguridad
+- [backend/tests/](backend/tests/) — Suite de pruebas unitarias e integración
 - [js/config.js](js/config.js) — Helpers frontend, toast, confirmModal
 - [DOCUMENTACION_TECNICA.md](DOCUMENTACION_TECNICA.md) — Detalle HTML/CSS/JS
 
