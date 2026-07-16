@@ -1,11 +1,39 @@
 import datetime as dt
+import os
 
 import jwt
 import pytest
+from dotenv import load_dotenv
 
-import config
-from db import execute
-from security import hash_password
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env.test"))
+
+import app as flask_app_module  # noqa: E402  (import tras cargar env vars de test)
+import config  # noqa: E402
+from db import execute  # noqa: E402
+from security import hash_password  # noqa: E402
+
+TABLAS_A_LIMPIAR = [
+    "lecturas_anuncios",
+    "anuncios",
+    "recibos",
+    "pagos_gastos",
+    "gastos",
+    "propietarios",
+    "usuarios",
+]
+
+
+@pytest.fixture
+def client():
+    flask_app_module.app.config["TESTING"] = True
+    return flask_app_module.app.test_client()
+
+
+@pytest.fixture(autouse=True)
+def limpiar_tablas():
+    yield
+    for tabla in TABLAS_A_LIMPIAR:
+        execute(f"TRUNCATE TABLE {tabla} RESTART IDENTITY CASCADE")
 
 
 def _crear_usuario_admin(usuario="admin_test", password="clave-admin-123"):

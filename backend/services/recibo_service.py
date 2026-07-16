@@ -275,3 +275,20 @@ def get_estado_cuenta(propietario_id, desde: str = "", hasta: str = "") -> dict:
     rows = recibo_dao.get_recibos_estado_cuenta(propietario_id, desde, hasta)
     items = [_enriquecer_recibo(r) for r in rows]
     return {"propietario_id": propietario_id, "items": items, "total": len(items)}
+
+
+def get_detalle_recibo(recibo_id) -> dict | None:
+    row = recibo_dao.get_recibo_detalle(recibo_id)
+    if not row:
+        return None
+    recibo = _enriquecer_recibo(row)
+    recibo["propietario"] = {
+        "nombre": row["nombre"],
+        "apellido": row["apellido"],
+        "dni": row["dni"],
+        "correo": row.get("correo"),
+        "telefono": row.get("telefono"),
+    }
+    recibo["nro_departamento"] = row["nro_departamento"]
+    recibo["torre"] = row["torre"]
+    return recibo

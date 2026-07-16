@@ -85,6 +85,22 @@ def get_recibo_por_id(recibo_id):
     )
 
 
+def get_recibo_detalle(recibo_id):
+    return fetch_one(
+        """
+        SELECT r.id, r.propietario_id, r.monto_administracion, r.monto_agua,
+               r.monto_luz, r.monto_mantenimiento, r.monto_pagado,
+               r.fecha_emision, r.fecha_pago, r.pagado,
+               p.nombre, p.apellido, p.dni, p.nro_departamento, p.torre,
+               p.correo, p.telefono
+        FROM recibos r
+        JOIN propietarios p ON p.id = r.propietario_id
+        WHERE r.id = %s
+        """,
+        [recibo_id],
+    )
+
+
 def recibo_existe_en_mes(propietario_id, mes: str):
     return fetch_one(
         """

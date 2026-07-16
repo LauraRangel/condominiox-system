@@ -2118,3 +2118,157 @@ body {
         padding: 10px 8px;
     }
 }
+
+/* ========================================
+   COMPROBANTE DE RECIBO — estilos print
+======================================== */
+.acciones-group {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.comprobante {
+    font-size: 0.95rem;
+    color: var(--text-dark);
+}
+
+.comprobante-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border-bottom: 2px solid var(--primary);
+    padding-bottom: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.comprobante-header img {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+}
+
+.comprobante-header h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: var(--primary);
+}
+
+.comprobante-header p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.comprobante-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem 1.5rem;
+    background: var(--off-white);
+    border: 1px solid var(--light-gray);
+    border-radius: var(--radius);
+    padding: 1rem;
+    margin-bottom: 1.25rem;
+    font-size: 0.88rem;
+}
+
+.comprobante-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.comprobante-meta-item span:first-child {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.comprobante-meta-item span:last-child {
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.comprobante-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+
+.comprobante-table th {
+    background: var(--primary);
+    color: var(--white);
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    font-weight: 600;
+}
+
+.comprobante-table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.comprobante-table tr:last-child td {
+    border-bottom: none;
+    font-weight: 700;
+    background: rgba(45, 74, 74, 0.08);
+}
+
+.comprobante-estado {
+    display: inline-block;
+    padding: 0.3rem 0.9rem;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+}
+
+.comprobante-estado.pagado {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.comprobante-estado.pendiente {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.comprobante-footer {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    text-align: center;
+    border-top: 1px solid var(--light-gray);
+    padding-top: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+@media print {
+    body.printing-comprobante > *:not(#modalComprobante) {
+        display: none !important;
+    }
+
+    body.printing-comprobante #modalComprobante {
+        display: block !important;
+        position: static !important;
+        background: none !important;
+    }
+
+    body.printing-comprobante #modalComprobante .modal-card {
+        box-shadow: none !important;
+        border: none !important;
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+
+    body.printing-comprobante #modalComprobante .modal-header,
+    body.printing-comprobante #modalComprobante .modal-footer {
+        display: none !important;
+    }
+
+    body.printing-comprobante #modalComprobante .modal-body {
+        padding: 0 !important;
+    }
+}

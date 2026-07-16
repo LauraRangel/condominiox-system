@@ -190,3 +190,112 @@ function showToast(message, type = 'info', title = '') {
         setTimeout(() => toast.remove(), 320);
     }, 4000);
 }
+
+// ========================================
+// COMPROBANTE DE RECIBO (CU16)
+// ========================================
+async function verComprobante(reciboId) {
+    const { response, data } = await apiFetch(`/recibos/${reciboId}`);
+    if (!response.ok) {
+        showToast(data.error || 'No se pudo cargar el recibo', 'error');
+        return;
+    }
+
+    const r = data;
+    const total = (+r.monto_administracion) + (+r.monto_agua) + (+r.monto_luz) + (+r.monto_mantenimiento);
+    const saldo = r.saldo !== undefined ? +r.saldo : (total - (+r.monto_pagado || 0));
+    const pagado = r.pagado;
+    const prop = r.propietario || {};
+    const estadoClass = pagado ? 'pagado' : 'pendiente';
+    const estadoLabel = pagado ? '✅ PAGADO' : '⏳ PENDIENTE';
+    const fechaEmision = r.fecha_emision ? formatDate(r.fecha_emision) : '—';
+    const fechaPago = r.fecha_pago ? formatDate(r.fecha_pago) : '—';
+
+    document.getElementById('comprobanteBody').innerHTML = `
+        <div class="comprobante">
+            <div class="comprobante-header">
+                <img src="img/logo.png" alt="Logo">
+                <div>
+                    <h2>CondominioX</h2>
+                    <p>Comprobante de Recibo #${r.id}</p>
+                </div>
+            </div>
+
+            <div class="comprobante-meta">
+                <div class="comprobante-meta-item">
+                    <span>Propietario</span>
+                    <span>${prop.nombre || ''} ${prop.apellido || ''}</span>
+                </div>
+                <div class="comprobante-meta-item">
+                    <span>DNI</span>
+                    <span>${prop.dni || '—'}</span>
+                </div>
+                <div class="comprobante-meta-item">
+                    <span>Departamento</span>
+                    <span>${r.nro_departamento || '—'}</span>
+                </div>
+                <div class="comprobante-meta-item">
+                    <span>Torre</span>
+                    <span>${r.torre || '—'}</span>
+                </div>
+                <div class="comprobante-meta-item">
+                    <span>Fecha de emisión</span>
+                    <span>${fechaEmision}</span>
+                </div>
+                <div class="comprobante-meta-item">
+                    <span>Fecha de pago</span>
+                    <span>${fechaPago}</span>
+                </div>
+            </div>
+
+            <span class="comprobante-estado ${estadoClass}">${estadoLabel}</span>
+
+            <table class="comprobante-table">
+                <thead>
+                    <tr>
+                        <th>Concepto</th>
+                        <th style="text-align:right;">Monto</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>Administración</td><td style="text-align:right;">${formatCurrency(r.monto_administracion)}</td></tr>
+                    <tr><td>Agua</td><td style="text-align:right;">${formatCurrency(r.monto_agua)}</td></tr>
+                    <tr><td>Luz</td><td style="text-align:right;">${formatCurrency(r.monto_luz)}</td></tr>
+                    <tr><td>Mantenimiento</td><td style="text-align:right;">${formatCurrency(r.monto_mantenimiento)}</td></tr>
+                    <tr>
+                        <td>TOTAL</td>
+                        <td style="text-align:right;">${formatCurrency(total)}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <table class="comprobante-table">
+                <thead>
+                    <tr><th>Monto pagado</th><th style="text-align:right;">Saldo pendiente</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>${formatCurrency(r.monto_pagado || 0)}</td>
+                        <td style="text-align:right;">${formatCurrency(saldo)}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p class="comprobante-footer">
+                Generado el ${new Date().toLocaleDateString('es-PE')} · CondominioX Sistema de Gestión
+            </p>
+        </div>
+    `;
+
+    document.getElementById('modalComprobante').classList.remove('hidden');
+    document.body.classList.add('printing-comprobante');
+}
+
+function cerrarComprobante() {
+    document.getElementById('modalComprobante').classList.add('hidden');
+    document.body.classList.remove('printing-comprobante');
+}
+
+function imprimirComprobante() {
+    window.print();
+}

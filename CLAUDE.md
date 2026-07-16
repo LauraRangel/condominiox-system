@@ -124,7 +124,7 @@ Migraciones automáticas en `app.py`: `CREATE TABLE IF NOT EXISTS` + `ALTER TABL
 
 ---
 
-## Casos de Uso implementados (15/15 ✅)
+## Casos de Uso implementados (16/16 ✅)
 
 | CU | Descripción | Endpoint principal |
 |---|---|---|
@@ -143,6 +143,7 @@ Migraciones automáticas en `app.py`: `CREATE TABLE IF NOT EXISTS` + `ALTER TABL
 | CU13 | Comunicados con fecha caducidad | `GET/POST/DELETE /api/anuncios`, `GET /api/comunicados` |
 | CU14 | Estado financiero resumido | `GET /api/reportes/financiero` |
 | CU15 | Exportar morosidad a Excel | `GET /api/reportes/morosidad/excel` |
+| CU16 | Comprobante de recibo imprimible | `GET /api/recibos/<id>` |
 
 ---
 
@@ -183,6 +184,7 @@ Migraciones automáticas en `app.py`: `CREATE TABLE IF NOT EXISTS` + `ALTER TABL
 | GET | `/api/recibos?estado=&mes=` | Admin |
 | GET | `/api/recibos/propietario/<id>?estado=` | Admin / Propietario |
 | POST | `/api/recibos/<id>/pagar` | Admin / Propietario |
+| GET | `/api/recibos/<id>` | Admin / Propietario (solo su recibo) |
 | DELETE | `/api/recibos/<id>` | Admin |
 | GET | `/api/recibos/estructura/bst?saldo_min=&saldo_max=&mes=&estado=` | Admin |
 | GET | `/api/recibos/estructura/avl?saldo_min=&saldo_max=&mes=&estado=` | Admin |
@@ -252,6 +254,7 @@ Todas implementadas desde cero en Python, sin librerías externas.
 - **Guardia frontend:** `auth.js` verifica `userData.tipo` al cargar `admin.html` / `propietario.html` → redirige a login si el rol no coincide.
 - **Sin revelación de info:** todos los errores de login retornan `"Usuario o contraseña inválidos"` sin indicar si existe el usuario o el rol.
 - **Logging seguridad:** `middleware.py` registra con `python-json-logger` cada token ausente, expirado, inválido o rol incorrecto — campos: `event`, `ip`, `path`, `method`, `user`, `rol_actual`, `rol_requerido`.
+- **Observabilidad:** `app.py` registra un access log JSON con `X-Request-Id` por request; `db.py` registra queries lentas (`SLOW_QUERY_MS`, default 200ms); endpoint `GET /api/health/db` expone el estado de la conexión a la base de datos.
 
 ---
 
@@ -279,6 +282,7 @@ Todas implementadas desde cero en Python, sin librerías externas.
 - `showToast(message, type, title)` — notificaciones tipo toast
 - `confirmModal(message, title, tipo)` — modal de confirmación Promise-based (compartido admin+propietario)
 - `cerrarConfirmModal(accepted)`
+- `verComprobante(reciboId)` / `cerrarComprobante()` / `imprimirComprobante()` — modal comprobante CU16 compartido admin+propietario
 
 ### auth.js
 - Maneja submit del `#loginForm` → POST `/api/login` → guarda token + userData → redirige por rol
@@ -339,7 +343,6 @@ Todas implementadas desde cero en Python, sin librerías externas.
 | `README.md` | Guía de uso para el usuario final |
 | `README_INTEGRADOR.md` | Documento técnico integrador v5.0 (CU, arquitectura, endpoints, SOLID, testing y CI) |
 | `DOCUMENTACION_TECNICA.md` | Documentación técnica completa v5.0 (SQL schema, estructuras, seguridad) |
-| `temp.md` | Secciones de informe académico: arquitectura, patrones, librerías (borrar después de usar) |
 
 ---
 
