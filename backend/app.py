@@ -1,5 +1,8 @@
+import time
+import uuid
+
 from dotenv import load_dotenv
-from flask import Flask
+from flask import Flask, g, request
 from flask_cors import CORS
 
 load_dotenv()
@@ -15,8 +18,10 @@ from routes import (
     anuncio_routes,
     reporte_routes,
 )
+from utils.logger import get_logger
 
 app = Flask(__name__)
+_access_log = get_logger("access")
 
 # Registrar blueprints (Controllers en MVC)
 app.register_blueprint(health_routes.bp)
@@ -29,6 +34,28 @@ app.register_blueprint(anuncio_routes.bp)
 app.register_blueprint(reporte_routes.bp)
 
 CORS(app, resources={r"/api/*": {"origins": "*", "methods": ["GET","POST","PUT","DELETE","OPTIONS","PATCH"], "allow_headers": ["Content-Type","Authorization"]}})
+
+
+@app.before_request
+def _iniciar_request():
+    g.request_id = request.headers.get("X-Request-Id", str(uuid.uuid4()))
+    g.inicio_request = time.perf_counter()
+
+
+@app.after_request
+def _registrar_acceso(response):
+    duracion_ms = round((time.perf_counter() - g.get("inicio_request", time.perf_counter())) * 1000, 2)
+    response.headers["X-Request-Id"] = g.get("request_id", "-")
+    nivel = "warning" if response.status_code >= 400 else "info"
+    getattr(_access_log, nivel)("HTTP request", extra={
+        "event": "http_request",
+        "request_id": g.get("request_id", "-"),
+        "method": request.method,
+        "path": request.path,
+        "status": response.status_code,
+        "duration_ms": duracion_ms,
+    })
+    return response
 
 
 def _ensure_extra_tables():

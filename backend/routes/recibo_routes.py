@@ -100,6 +100,23 @@ def pagar_recibo(recibo_id):
     return jsonify(result)
 
 
+@bp.get("/api/recibos/<int:recibo_id>")
+def detalle_recibo(recibo_id):
+    payload, err = get_payload()
+    if err:
+        return auth_response(err)
+
+    row = recibo_service.get_detalle_recibo(recibo_id)
+    if not row:
+        return jsonify({"error": "Recibo no encontrado"}), 404
+
+    if payload.get("tipo") == "Propietario":
+        if str(row.get("propietario_id")) != str(payload.get("propietario_id")):
+            return jsonify({"error": "No autorizado"}), 403
+
+    return jsonify(row)
+
+
 @bp.delete("/api/recibos/<int:recibo_id>")
 def eliminar_recibo(recibo_id):
     payload, err = get_payload()

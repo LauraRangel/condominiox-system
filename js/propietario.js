@@ -157,10 +157,16 @@ async function cargarRecibosPendientes() {
             <td>${formatCurrency(pagado)}</td>
             <td>${formatCurrency(saldo)}</td>
             <td>
-                <button class="btn btn-success" onclick="pagarRecibo(${recibo.id}, ${saldo})"
-                        style="padding: 0.4rem 0.8rem;">
-                    Pagar
-                </button>
+                <div class="acciones-group">
+                    <button class="btn btn-success" onclick="pagarRecibo(${recibo.id}, ${saldo})"
+                            style="padding: 0.4rem 0.8rem;">
+                        Pagar
+                    </button>
+                    <button class="btn btn-secondary" onclick="verComprobante(${recibo.id})"
+                            style="padding: 0.4rem 0.8rem;" title="Ver comprobante">
+                        🧾
+                    </button>
+                </div>
             </td>
         `;
         tbody.appendChild(tr);
@@ -240,39 +246,7 @@ async function cargarRecibosPagados() {
     }
 
     recibosPagados = data.items || [];
-    const tbody = document.getElementById('tablaRecibosPagados');
-
-    if (recibosPagados.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="empty-state">No tiene recibos pagados aún</td></tr>';
-        return;
-    }
-
-    tbody.innerHTML = '';
-    recibosPagados.forEach(recibo => {
-        const total = toNumber(recibo.monto_administracion)
-            + toNumber(recibo.monto_agua)
-            + toNumber(recibo.monto_luz)
-            + toNumber(recibo.monto_mantenimiento);
-        const pagado = toNumber(recibo.monto_pagado);
-        const saldo = recibo.saldo !== undefined ? toNumber(recibo.saldo) : (total - pagado);
-
-        const mesAnio = formatMonthYear(recibo.fecha_emision);
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${recibo.id}</td>
-            <td>${mesAnio}</td>
-            <td><strong>${formatCurrency(total)}</strong></td>
-            <td>${formatCurrency(pagado)}</td>
-            <td>${formatCurrency(saldo)}</td>
-            <td>${formatDate(recibo.fecha_pago)}</td>
-            <td>${formatCurrency(recibo.monto_administracion)}</td>
-            <td>${formatCurrency(recibo.monto_agua)}</td>
-            <td>${formatCurrency(recibo.monto_luz)}</td>
-            <td>${formatCurrency(recibo.monto_mantenimiento)}</td>
-        `;
-        tbody.appendChild(tr);
-    });
+    renderTablaRecibosPagados(recibosPagados);
 }
 
 // ========================================
@@ -381,21 +355,26 @@ function renderTablaRecibosPagados(items) {
     const tbody = document.getElementById('tablaRecibosPagados');
     if (!tbody) return;
     if (!items.length) {
-        tbody.innerHTML = `<tr><td colspan="10" class="empty-state">No hay recibos pagados</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11" class="empty-state">No hay recibos pagados</td></tr>`;
         return;
     }
     tbody.innerHTML = items.map(r => `
         <tr>
             <td>${r.id}</td>
-            <td>${(r.fecha_emision || '').slice(0, 7)}</td>
+            <td>${formatMonthYear(r.fecha_emision)}</td>
             <td>S/ ${(+r.total).toFixed(2)}</td>
             <td>S/ ${(+(r.monto_pagado || 0)).toFixed(2)}</td>
             <td>S/ ${(+(r.saldo || 0)).toFixed(2)}</td>
-            <td>${r.fecha_pago || '-'}</td>
+            <td>${formatDate(r.fecha_pago)}</td>
             <td>S/ ${(+(r.monto_administracion || 0)).toFixed(2)}</td>
             <td>S/ ${(+(r.monto_agua || 0)).toFixed(2)}</td>
             <td>S/ ${(+(r.monto_luz || 0)).toFixed(2)}</td>
             <td>S/ ${(+(r.monto_mantenimiento || 0)).toFixed(2)}</td>
+            <td>
+                <button class="btn btn-secondary btn-sm" onclick="verComprobante(${r.id})" title="Ver comprobante">
+                    🧾
+                </button>
+            </td>
         </tr>
     `).join('');
 }

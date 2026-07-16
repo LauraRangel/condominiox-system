@@ -1,5 +1,5 @@
 import jwt as pyjwt
-from flask import request, jsonify
+from flask import request, jsonify, g
 
 import config
 from utils.logger import get_logger
@@ -11,11 +11,16 @@ def _ip():
     return request.headers.get("X-Forwarded-For", request.remote_addr or "unknown").split(",")[0].strip()
 
 
+def _request_id():
+    return g.get("request_id", "-")
+
+
 def get_payload():
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         _sec_log.warning("Acceso sin token", extra={
             "event": "missing_token",
+            "request_id": _request_id(),
             "ip": _ip(),
             "path": request.path,
             "method": request.method,
@@ -33,6 +38,7 @@ def get_payload():
     except pyjwt.ExpiredSignatureError:
         _sec_log.warning("Token expirado", extra={
             "event": "expired_token",
+            "request_id": _request_id(),
             "ip": _ip(),
             "path": request.path,
         })
@@ -40,6 +46,7 @@ def get_payload():
     except pyjwt.InvalidTokenError:
         _sec_log.warning("Token inválido", extra={
             "event": "invalid_token",
+            "request_id": _request_id(),
             "ip": _ip(),
             "path": request.path,
         })
@@ -52,6 +59,7 @@ def require_roles(payload, *roles):
     if payload.get("tipo") not in roles:
         _sec_log.warning("Acceso denegado por rol", extra={
             "event": "forbidden_role",
+            "request_id": _request_id(),
             "ip": _ip(),
             "path": request.path,
             "method": request.method,

@@ -756,7 +756,10 @@ function listarRecibos(tipo = 'pendientes', items = []) {
             <td>${formatDate(recibo.fecha_emision)}</td>
             <td>${formatDate(recibo.fecha_pago)}</td>
             <td>
-                <button class="btn btn-danger btn-sm" onclick="eliminarRecibo(${recibo.id})">Eliminar</button>
+                <div class="acciones-group">
+                    <button class="btn btn-secondary btn-sm" onclick="verComprobante(${recibo.id})" title="Ver comprobante">🧾</button>
+                    <button class="btn btn-danger btn-sm" onclick="eliminarRecibo(${recibo.id})">Eliminar</button>
+                </div>
             </td>
         `;
         tbody.appendChild(tr);
