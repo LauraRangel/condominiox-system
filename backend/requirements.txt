@@ -5,6 +5,6 @@ psycopg[binary]
 python-dotenv==1.2.2
 PyJWT==2.13.0
 openpyxl==3.1.5
-python-json-logger==4.1.0
+python-json-logger==4.2.0
 validators==0.35.0
 python-dateutil==2.9.0
