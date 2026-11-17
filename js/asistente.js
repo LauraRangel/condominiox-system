@@ -4,7 +4,7 @@
 
 let _chatIniciado = false;
 
-const _ICONO_FUENTE = { reglamento: '📘', recibo: '🧾', pago: '💳', reserva: '📅', gastos: '📊', documento: '📄', areas: '📍' };
+const _ICONO_FUENTE = { reglamento: '📘', recibo: '🧾', pago: '💳', reserva: '📅', gastos: '📊', documento: '📄', areas: '📍', disponibilidad: '🗓️' };
 
 function _escChat(texto) {
     return String(texto ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
