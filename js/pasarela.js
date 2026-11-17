@@ -34,7 +34,7 @@ const CulqiSandbox = {
         if (!/^\d{3,4}$/.test(cvv || '')) return { error: 'CVV inválido' };
         if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email || '')) return { error: 'Ingrese un correo válido' };
         const azar = Array.from(crypto.getRandomValues(new Uint8Array(12)))
-            .map(b => 'abcdefghijklmnopqrstuvwxyz0123456789'[b % 36]).join('');
+            .map(b => 'abcdefghijkmnpqrstuvwxyz23456789'[b % 32]).join('');
         return { id: `tkn_test_${marca}_${n.slice(-4)}_${azar}`, marca, last4: n.slice(-4) };
     }
 };

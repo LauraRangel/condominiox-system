@@ -19,6 +19,11 @@ CATEGORIAS = {"reglamento": "Reglamento", "acta": "Acta de junta", "manual": "Ma
               "presupuesto": "Presupuesto", "otro": "Otro"}
 TAM_FRAGMENTO = 800
 
+
+class PdfProtegido(ValueError):
+    """El PDF está cifrado: se informa al usuario con un mensaje propio."""
+
+
 _RUTA_REGLAMENTO = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "reglamento.json")
 
 
@@ -30,7 +35,7 @@ def extraer_texto_pdf(contenido: bytes) -> tuple[int, list]:
     try:
         lector = PdfReader(io.BytesIO(contenido))
         if lector.is_encrypted:
-            raise ValueError("El PDF está protegido con contraseña")
+            raise PdfProtegido("El PDF está protegido con contraseña")
         paginas = len(lector.pages)
         fragmentos = []
         for n, pagina in enumerate(lector.pages, start=1):
@@ -100,8 +105,13 @@ def subir(archivo, titulo, categoria, descripcion, publico, usuario):
         return None, err
     try:
         paginas, fragmentos = extraer_texto_pdf(contenido)
-    except ValueError as e:
-        return None, str(e)
+    except PdfProtegido:
+        return None, "El PDF está protegido con contraseña"
+    except ValueError:
+        # Cualquier otro error del lector (incluidos los internos de pypdf) se registra
+        # en el log y al cliente solo le llega un mensaje genérico
+        log.warning("PDF rechazado al extraer texto", exc_info=True)
+        return None, "El archivo no es un PDF válido"
 
     doc = documento_dao.crear_documento(*meta, nombre, contenido, paginas, bool(publico),
                                         bool(fragmentos), usuario, fragmentos)

@@ -230,7 +230,7 @@
     document.querySelectorAll('.filtros-enlinea').forEach(f => { f.classList.add('filtro-contenido'); plegarFiltros(f); });
     // búsqueda avanzada de recibos: mismo estilo de panel
     document.querySelectorAll('details.recibos-advanced > summary').forEach(sm => {
-        sm.innerHTML = `${svg('filtro')}<span>${sm.textContent.replace(/^\W+/, '').trim()}</span>${svg('chevron', 'filtro-chevron')}`;
+        sm.innerHTML = `${svg('filtro')}<span>${escapeHtml(sm.textContent.replace(/^\W+/, '').trim())}</span>${svg('chevron', 'filtro-chevron')}`;
         sm.classList.add('filtro-toggle');
     });
 
