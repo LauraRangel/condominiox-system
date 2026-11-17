@@ -1,3 +1,4 @@
+from utils.validacion import validar_propietario
 from dao import propietario_dao
 from security import hash_password
 from structures import ListaPropietarios, ArbolPropietariosBST
@@ -66,6 +67,9 @@ def crear_propietario(body: dict):
     required = ["usuario", "nombre", "apellido", "dni", "nro_departamento", "torre"]
     if not all(body.get(k) for k in required):
         return None, "Datos incompletos"
+    error_datos = validar_propietario(body)
+    if error_datos:
+        return None, error_datos
 
     dni = str(body.get("dni", "")).strip()
     if not dni.isdigit() or len(dni) != 8:
@@ -104,6 +108,9 @@ def actualizar_propietario(propietario_id, body: dict):
     existente = propietario_dao.get_propietario_por_id(propietario_id)
     if not existente:
         return None, "not_found"
+    error_datos = validar_propietario(body)
+    if error_datos:
+        return None, error_datos
 
     if propietario_dao.usuario_existe_excluyendo(body["usuario"].strip(), propietario_id):
         return None, "Ya existe otro usuario con ese nombre"

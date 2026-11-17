@@ -325,3 +325,114 @@ Para tests (`backend/.env.test`, no versionado): mismas variables apuntando a un
 
 **Versión integrador:** 5.0  
 **Fecha:** Junio 2026
+
+---
+
+## 13. Componentes innovadores (APF3)
+
+Tres módulos nuevos sobre la plataforma base. No agregan dependencias: todo usa la librería estándar de Python.
+
+### 13.1 Pasarela de pagos emulada (CU17)
+
+| Pieza | Archivo |
+|---|---|
+| Adaptadores sandbox Culqi / Yape / Mercado Pago (patrón Strategy) | `backend/services/pasarelas.py` |
+| Orquestación: valida, cobra, concilia con FIFO, registra | `backend/services/pago_service.py` |
+| Tokenización de tarjeta en el navegador (Culqi.js emulado) | `js/pasarela.js` |
+
+- `POST /api/pagos` (Propietario) con `concepto` `recibo` (pago total o parcial) o `garantia` (monto completo de la garantía de una reserva), y header `Idempotency-Key`: un reintento con la misma clave no cobra dos veces.
+- **Atómico:** el cobro aprobado, la actualización del recibo o la reserva, el reparto FIFO a los gastos y el registro en `transacciones_pago` se confirman en un solo commit, con el recibo o la reserva bloqueados (`SELECT ... FOR UPDATE`).
+- `transacciones_pago.concepto` distingue `recibo`, `garantia` y `devolucion`.
+- `GET /api/pagos/mios` (Propietario) y `GET /api/pagos?estado=` (Admin, con resumen de conciliación).
+- El número de tarjeta nunca llega al backend: el navegador genera `tkn_test_<marca>_<last4>_<azar>`.
+- `POST /api/recibos/<id>/pagar` queda solo para el Administrador (registro manual de efectivo o transferencia).
+- Datos de prueba: tarjeta `4111 1111 1111 1111` aprobada, `4000 0000 0000 0002` rechazada; Yape OTP `000000` rechazado; Mercado Pago con correo que contenga `rechazo` rechazado.
+
+### 13.2 Reserva de áreas comunes y garantías (CU18)
+
+| Área | Tarifa | Garantía | Uso | Aforo | Horario | Anticip. | Máx. |
+|---|---|---|---|---|---|---|---|
+| Salón de usos múltiples | S/ 80 | S/ 200 | Exclusivo | 40 | 09:00-23:00 | 48 h | 5 h |
+| Zona de parrillas | S/ 50 | S/ 100 | Exclusivo | 15 | 11:00-22:00 | 24 h | 4 h |
+| Gimnasio | — | — | Compartido | 8 | 06:00-22:00 | 1 h | 2 h |
+| Cowork | — | — | Compartido | 12 | 07:00-22:00 | 1 h | 4 h |
+| Pet shower | S/ 15 | S/ 30 | Exclusivo | 2 | 08:00-20:00 | 2 h | 1 h |
+
+Valores iniciales sembrados por `migrations.py`; el administrador los edita todos desde "Pagos y Reservas" (`PUT /api/areas-comunes/<id>`, validado con `reserva_service.validar_area()`), además de activar o desactivar cada área. Los cambios aplican solo a reservas nuevas.
+
+- **Reglas** (`reserva_service.validar_reglas()`, función pura): horario, duración máxima, anticipación mínima (hora de Lima), aforo y deuda vencida (`DIAS_DEUDA_VENCIDA`, default 30).
+- **Uso exclusivo vs compartido:** en un área exclusiva no se aceptan reservas que se crucen; en una compartida (gimnasio, cowork) se aceptan mientras la suma de personas no supere el aforo. Se valida dentro de la transacción con `SELECT ... FOR UPDATE` sobre el área.
+- **Tarifa:** va al recibo del mes (`recibos.monto_reservas`). Si el recibo ya existe se suma al confirmar la reserva; si no, se incluye al generarlo. Cancelar la descuenta.
+- **Garantía** (no va al recibo):
+  1. Si el área tiene garantía, la reserva nace en `pendiente_garantia` y bloquea el horario 30 minutos.
+  2. El propietario la paga completa por la pasarela (`POST /api/pagos` con `concepto: "garantia"`); al aprobarse, la reserva pasa a `confirmada` y la tarifa entra al recibo, todo en una sola transacción.
+  3. Si no se paga a tiempo, la reserva pasa a `expirada` y el horario se libera.
+  4. Después del uso, el administrador la resuelve (`POST /api/reservas/<id>/garantia/resolucion` con `retener` y `motivo`): devolución total, parcial o retención total. La devolución se emula como un objeto `refund` por el mismo medio del cobro y queda enlazada al cargo original (`transaccion_origen_id`).
+  5. Si la reserva se cancela antes de empezar, la garantía se devuelve completa automáticamente.
+- **Invitados:** al reservar, el propietario puede registrar la lista de invitados (nombres, apellidos y DNI de 8 dígitos o carné de extranjería de 9 a 12 caracteres), a mano o importando un CSV. Se guardan en `reserva_invitados`, validados con `reserva_service.validar_invitados()` (máximo `asistentes - 1`, sin documentos repetidos). Solo los ven el titular y el administrador (`GET /api/reservas/<id>/invitados`), que puede imprimir la lista para portería. Estos datos nunca se envían al asistente IA.
+- Estados de garantía: `no_aplica`, `pendiente`, `pagada` (en custodia), `devuelta`, `devuelta_parcial`, `retenida`, `no_pagada`.
+- Endpoints: `GET /api/areas-comunes` (`?todas=1` para el admin), `PUT /api/areas-comunes/<id>` (Admin), `GET /api/areas-comunes/<id>/disponibilidad?fecha=`, `POST /api/reservas`, `GET /api/reservas/mias`, `GET /api/reservas` (Admin), `DELETE /api/reservas/<id>`, `POST /api/reservas/<id>/garantia/resolucion` (Admin).
+
+### 13.3 Asistente virtual con IA (CU19)
+
+```
+Pregunta → detección de intención → RAG propio (TF-IDF sobre data/reglamento.json)
+         + datos SOLO del propietario del JWT (recibos, pagos, reservas) + gastos del edificio
+         → LLM (Groq Llama 3.3 70B o Gemini) con fuentes [F1], [F2]...
+         → respuesta citada · si el LLM falla: modo respaldo con plantillas
+         → auditoría en consultas_asistente
+```
+
+- `services/rag.py`: tokenizador, stopwords, stemmer y sinónimos en español, TF-IDF y similitud coseno implementados desde cero.
+- `services/llm_client.py`: cliente HTTP con `urllib` para Groq (API compatible con OpenAI) o Gemini, intercambiable por variable de entorno.
+- Minimización de datos: al LLM no se envían DNI, correo ni teléfono, y nunca datos de otros propietarios.
+- Límite de 8 consultas por minuto por propietario. Endpoint: `POST /api/asistente/consulta` (Propietario). Cada consulta queda registrada en `consultas_asistente` (trazabilidad), sin pantalla en el admin.
+
+### 13.4 Variables de entorno nuevas
+
+| Variable | Descripción | Default |
+|---|---|---|
+| `LLM_PROVIDER` | `groq` o `gemini` | `groq` |
+| `GROQ_API_KEY` | API key de console.groq.com (si falta, el asistente responde en modo respaldo) | — |
+| `GEMINI_API_KEY` | API key de Google AI Studio (si `LLM_PROVIDER=gemini`) | — |
+| `LLM_MODEL` | Modelo a usar | `llama-3.3-70b-versatile` / `gemini-2.5-flash` |
+| `LLM_TIMEOUT` | Segundos de espera al LLM | `12` |
+| `DIAS_DEUDA_VENCIDA` | Días para considerar un recibo vencido | `30` |
+
+### 13.5 Datos de demostración
+
+`cd backend && python seed_demo.py` (idempotente) crea el admin `admin / Admin2026!` si no hay ninguno, 8 propietarios (contraseña = DNI), gastos y recibos de los dos últimos meses. `maria.quispe / 45678912` tiene el recibo del mes pendiente; `carlos.rojas / 41236587` queda moroso para mostrar el bloqueo de reservas.
+
+### 13.7 Documentos del condominio (PDF en PostgreSQL)
+
+- Solo se aceptan **PDF de hasta 5 MB**. Se valida la extensión y el contenido real (`%PDF-`), y se rechazan PDFs protegidos con contraseña.
+- El archivo se guarda en PostgreSQL (`documentos.contenido BYTEA`), porque el disco del plan gratis de Render se borra en cada deploy. En producción se movería a un almacenamiento tipo S3 y la tabla guardaría solo la referencia.
+- Al subir, `pypdf` extrae el texto por página y lo parte en fragmentos de ~800 caracteres (`documento_fragmentos`). El asistente IA indexa con TF-IDF los fragmentos de los documentos **públicos** y los cita como "Título, pág. N". El índice se reconstruye solo cuando cambia algún documento.
+- Un PDF escaneado (sin texto) se guarda y se puede ver, pero el asistente no lo lee (haría falta OCR).
+- El archivo se descarga por `GET /api/documentos/<id>/archivo` con token; el propietario solo accede a los públicos. En el navegador se muestra en un visor embebido a partir de un blob, sin exponer una URL pública.
+- El propietario tiene la sección "Documentos" con el reglamento navegable (índice, buscador con resaltado) y los PDFs publicados. Las fuentes que cita el asistente abren el artículo o el PDF correspondiente.
+- Endpoints: `GET /api/documentos`, `POST /api/documentos` (Admin, multipart), `GET /api/documentos/<id>/archivo`, `PUT /api/documentos/<id>` (Admin), `DELETE /api/documentos/<id>` (Admin), `GET /api/reglamento`.
+- Dependencia nueva: `pypdf`. `seed_demo.py` carga un acta de junta y un manual del gimnasio de ejemplo.
+
+### 13.6 Pruebas
+
+`tests/unit/test_pasarelas.py`, `test_rag.py`, `test_reglas_reserva.py`, `test_llm_client.py` y `tests/integration/test_innovacion_routes.py` (pagos aprobados y rechazados, idempotencia, cargo de reservas, morosidad, cruce de horarios, asistente con y sin LLM, minimización de datos). Total de la suite: 175 tests (185 con las de seguridad, ver 13.8).
+
+### 13.8 Seguridad (endurecimiento APF3)
+
+| Riesgo | Control aplicado |
+|---|---|
+| XSS almacenado (datos del usuario dibujados con innerHTML) | `escapeHtml()` en `js/config.js` para todo dato de texto + validación en backend (`utils/validacion.py`) de nombre, apellido, usuario, torre, depto, teléfono y correo |
+| Fuerza bruta en login y recuperación | `LimitadorIntentos`: 5 fallos por IP+usuario bloquean 15 min (login) o 1 h (recuperación), responde 429 con `Retry-After` y deja log `rate_limited` |
+| Enumeración de cuentas | La recuperación responde el mismo mensaje exista o no el usuario |
+| Contraseñas débiles | Mínimo 8 caracteres con letras y números; no puede ser el DNI ni repetir la actual |
+| Contraseña inicial = DNI | El login devuelve `debe_cambiar_contrasena` y el panel muestra un aviso hasta que se cambie |
+| CORS abierto | Solo orígenes de `CORS_ORIGINS` (por defecto GitHub Pages y localhost) |
+| Cabeceras | `nosniff`, `X-Frame-Options DENY`, `HSTS`, `Referrer-Policy`, CSP `default-src 'none'` en la API y CSP en los 4 HTML |
+| Fuga de errores | Handler global: 500 genérico con `request_id`, el detalle solo va al log |
+| JSON con tipos inesperados (lista donde va texto, `NaN` en montos) | `json_body()` en `middleware.py` normaliza el cuerpo y los montos no finitos se rechazan: responde 400, nunca 500 |
+| Secreto JWT corto | Aviso al arrancar si `JWT_SECRET` tiene menos de 32 caracteres |
+
+Pruebas: `tests/integration/test_seguridad.py` (10 casos). Total suite: 185 tests.
+
+Pendiente recomendado (fuera del alcance del avance): token en `httpOnly cookie` en vez de `localStorage`, revocación de JWT al cerrar sesión, recuperación por correo con código temporal y limitador en Redis si hay varias instancias.

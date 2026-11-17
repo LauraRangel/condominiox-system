@@ -85,7 +85,6 @@ def recuperar_contrasena(usuario: str, dni: str, nueva: str):
 
 
 def cambiar_contrasena(usuario_id, actual: str, nueva: str):
-    user = usuario_dao.get_usuario_por_id(usuario_id)
     # get_usuario_por_id no trae password_hash; necesitamos fetch directo
     from db import fetch_one
     row = fetch_one("SELECT id, password_hash FROM usuarios WHERE id = %s", [usuario_id])

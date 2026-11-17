@@ -2,10 +2,16 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; frame-src blob: https://www.youtube-nocookie.com; connect-src 'self' http://localhost:5000 http://127.0.0.1:5000 https://condominiox-system.onrender.com; object-src 'none'; base-uri 'self'; form-action 'self'">
+    <meta name="referrer" content="no-referrer">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="CondominioX - Sistema de Gestión Inteligente de Condominio">
     <title>CondominioX - Gestión Inteligente</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
     <link rel="stylesheet" href="css/styles.css?v=20260716">
+    <link rel="stylesheet" href="css/moderno.css?v=20261116">
 </head>
 <body>
     <div class="app-container">
@@ -258,7 +264,7 @@
         </main>
     </div>
 
-    <script src="js/config.js?v=20260716"></script>
+    <script src="js/config.js?v=20261116"></script>
     <script src="js/auth.js?v=20260716"></script>
     <script>
         // Función para cambiar de pestaña
@@ -316,5 +322,6 @@
             });
         }
     </script>
+    <script src="js/ui-moderno.js?v=20261116"></script>
 </body>
 </html>

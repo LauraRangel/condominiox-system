@@ -10,9 +10,17 @@ load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env.test"))
 import app as flask_app_module  # noqa: E402  (import tras cargar env vars de test)
 import config  # noqa: E402
 from db import execute  # noqa: E402
+from migrations import sembrar_areas  # noqa: E402
 from security import hash_password  # noqa: E402
 
 TABLAS_A_LIMPIAR = [
+    "documento_fragmentos",
+    "documentos",
+    "consultas_asistente",
+    "transacciones_pago",
+    "reserva_invitados",
+    "reservas",
+    "areas_comunes",
     "lecturas_anuncios",
     "anuncios",
     "recibos",
@@ -31,9 +39,15 @@ def client():
 
 @pytest.fixture(autouse=True)
 def limpiar_tablas():
+    from services import asistente_service
+    asistente_service._historial.clear()   # el límite por minuto no debe arrastrarse entre tests
+    from routes import auth_routes
+    auth_routes.limitador_login.reiniciar()
+    auth_routes.limitador_recuperar.reiniciar()
     yield
     for tabla in TABLAS_A_LIMPIAR:
         execute(f"TRUNCATE TABLE {tabla} RESTART IDENTITY CASCADE")
+    sembrar_areas()  # deja las áreas comunes con su configuración inicial para el siguiente test
 
 
 def _crear_usuario_admin(usuario="admin_test", password="clave-admin-123"):

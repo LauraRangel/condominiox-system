@@ -9,3 +9,11 @@ backend/.venv/
 .coverage
 htmlcov/
 backend/.env.test
+backend/.env
+.env
+
+# Configuración local de Claude Code
+.claude/settings.local.json
+
+# Entregables generados (pptx/docx), no se versionan
+Claude outputs/

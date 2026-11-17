@@ -20,15 +20,28 @@ def _recibo_total(recibo) -> float:
     t = (to_decimal(recibo["monto_administracion"])
          + to_decimal(recibo["monto_agua"])
          + to_decimal(recibo["monto_luz"])
-         + to_decimal(recibo["monto_mantenimiento"]))
+         + to_decimal(recibo["monto_mantenimiento"])
+         + to_decimal(recibo.get("monto_reservas") or 0))
     return money_float(t)
+
+
+def saldo_decimal(recibo) -> Decimal:
+    total = (to_decimal(recibo["monto_administracion"]) + to_decimal(recibo["monto_agua"])
+             + to_decimal(recibo["monto_luz"]) + to_decimal(recibo["monto_mantenimiento"])
+             + to_decimal(recibo.get("monto_reservas") or 0))
+    return round_money(total - to_decimal(recibo.get("monto_pagado") or 0))
+
+
+def enriquecer_recibo(row: dict) -> dict:
+    return _enriquecer_recibo(row)
 
 
 def _recibo_saldo(recibo) -> float:
     total = (to_decimal(recibo["monto_administracion"])
              + to_decimal(recibo["monto_agua"])
              + to_decimal(recibo["monto_luz"])
-             + to_decimal(recibo["monto_mantenimiento"]))
+             + to_decimal(recibo["monto_mantenimiento"])
+             + to_decimal(recibo.get("monto_reservas") or 0))
     saldo = total - to_decimal(recibo.get("monto_pagado") or 0)
     if saldo < 0:
         saldo = Decimal("0")
@@ -43,6 +56,7 @@ def _enriquecer_recibo(row: dict) -> dict:
         "monto_agua": row["monto_agua"],
         "monto_luz": row["monto_luz"],
         "monto_mantenimiento": row["monto_mantenimiento"],
+        "monto_reservas": row.get("monto_reservas") or 0,
         "monto_pagado": row.get("monto_pagado", 0),
         "fecha_emision": row["fecha_emision"].isoformat() if hasattr(row["fecha_emision"], "isoformat") else row["fecha_emision"],
         "fecha_pago": row["fecha_pago"].isoformat() if row.get("fecha_pago") else None,
@@ -57,31 +71,35 @@ def _enriquecer_recibo(row: dict) -> dict:
     return recibo
 
 
-def aplicar_pago_fifo(monto, fecha_emision: str) -> tuple[float, float]:
+def aplicar_pago_fifo_tx(conn, cur, monto, fecha_emision) -> tuple[float, float]:
+    """Distribuye el pago entre los gastos pendientes del mes (FIFO) dentro de una transacción abierta."""
     mes = str(fecha_emision)[:7]
     remaining = round_money(monto)
     applied = Decimal("0.00")
     if remaining <= 0:
         return float(applied), float(remaining)
+    gastos = gasto_dao.get_gastos_pendientes_del_mes(mes, conn, cur)
+    for gasto in gastos:
+        if remaining <= 0:
+            break
+        saldo_gasto = round_money(
+            to_decimal(gasto["monto"]) - to_decimal(gasto.get("monto_pagado") or 0)
+        )
+        if saldo_gasto <= 0:
+            continue
+        aplicar = min(remaining, saldo_gasto)
+        gasto_dao.insert_pago_gasto_tx(cur, gasto["id"], aplicar)
+        remaining = round_money(remaining - aplicar)
+        applied = round_money(applied + aplicar)
+    return float(applied), float(remaining)
 
+
+def aplicar_pago_fifo(monto, fecha_emision: str) -> tuple[float, float]:
     with get_db() as conn:
         with conn.cursor() as cur:
-            gastos = gasto_dao.get_gastos_pendientes_del_mes(mes, conn, cur)
-            for gasto in gastos:
-                if remaining <= 0:
-                    break
-                saldo_gasto = round_money(
-                    to_decimal(gasto["monto"]) - to_decimal(gasto.get("monto_pagado") or 0)
-                )
-                if saldo_gasto <= 0:
-                    continue
-                aplicar = min(remaining, saldo_gasto)
-                gasto_dao.insert_pago_gasto_tx(cur, gasto["id"], aplicar)
-                remaining = round_money(remaining - aplicar)
-                applied = round_money(applied + aplicar)
+            resultado = aplicar_pago_fifo_tx(conn, cur, monto, fecha_emision)
         conn.commit()
-
-    return float(applied), float(remaining)
+    return resultado
 
 
 def generar_recibos(fecha_emision: str, mes: str) -> dict:
@@ -107,9 +125,13 @@ def generar_recibos(fecha_emision: str, mes: str) -> dict:
     for prop in propietarios:
         if recibo_dao.recibo_existe_en_mes(prop["id"], mes):
             continue
+        from dao import reserva_dao
+        monto_res = round_money(reserva_dao.total_reservas_sin_recibo(prop["id"], mes))
         row = recibo_dao.create_recibo(
-            prop["id"], monto_admin, monto_agua, monto_luz, monto_mant, fecha_emision
+            prop["id"], monto_admin, monto_agua, monto_luz, monto_mant, fecha_emision, monto_res
         )
+        if monto_res > 0:
+            reserva_dao.vincular_reservas_a_recibo(prop["id"], mes, row["id"])
         recibo = _enriquecer_recibo(row)
         recibo["propietario"] = {"nombre": prop["nombre"], "apellido": prop["apellido"]}
         recibo["nro_departamento"] = prop["nro_departamento"]
@@ -194,7 +216,8 @@ def pagar_recibo(recibo_id, monto_raw, propietario_payload_id=None):
     total = (to_decimal(current["monto_administracion"])
              + to_decimal(current["monto_agua"])
              + to_decimal(current["monto_luz"])
-             + to_decimal(current["monto_mantenimiento"]))
+             + to_decimal(current["monto_mantenimiento"])
+             + to_decimal(current.get("monto_reservas") or 0))
     saldo = round_money(total - to_decimal(current.get("monto_pagado") or 0))
     if monto > saldo:
         return None, f"El monto excede el saldo pendiente ({money_float(saldo):.2f})"

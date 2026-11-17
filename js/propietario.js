@@ -103,7 +103,8 @@ async function cargarEstadisticas() {
         const total = toNumber(r.monto_administracion)
             + toNumber(r.monto_agua)
             + toNumber(r.monto_luz)
-            + toNumber(r.monto_mantenimiento);
+            + toNumber(r.monto_mantenimiento)
+            + toNumber(r.monto_reservas);
         const pagado = toNumber(r.monto_pagado);
         return sum + (total - pagado);
     }, 0);
@@ -130,7 +131,7 @@ async function cargarRecibosPendientes() {
     const tbody = document.getElementById('tablaRecibosPendientes');
 
     if (recibosPendientes.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="empty-state">No tiene recibos pendientes</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" class="empty-state">No tiene recibos pendientes</td></tr>';
         return;
     }
 
@@ -139,7 +140,8 @@ async function cargarRecibosPendientes() {
         const total = toNumber(recibo.monto_administracion)
             + toNumber(recibo.monto_agua)
             + toNumber(recibo.monto_luz)
-            + toNumber(recibo.monto_mantenimiento);
+            + toNumber(recibo.monto_mantenimiento)
+            + toNumber(recibo.monto_reservas);
         const pagado = toNumber(recibo.monto_pagado);
         const saldo = recibo.saldo !== undefined ? toNumber(recibo.saldo) : (total - pagado);
 
@@ -153,6 +155,7 @@ async function cargarRecibosPendientes() {
             <td>${formatCurrency(recibo.monto_agua)}</td>
             <td>${formatCurrency(recibo.monto_luz)}</td>
             <td>${formatCurrency(recibo.monto_mantenimiento)}</td>
+            <td>${formatCurrency(recibo.monto_reservas || 0)}</td>
             <td><strong>${formatCurrency(total)}</strong></td>
             <td>${formatCurrency(pagado)}</td>
             <td>${formatCurrency(saldo)}</td>
@@ -164,7 +167,7 @@ async function cargarRecibosPendientes() {
                     </button>
                     <button class="btn btn-secondary" onclick="verComprobante(${recibo.id})"
                             style="padding: 0.4rem 0.8rem;" title="Ver comprobante">
-                        🧾
+                        ${window.iconoSvg ? iconoSvg('recibo') : '🧾'}
                     </button>
                 </div>
             </td>
@@ -173,63 +176,7 @@ async function cargarRecibosPendientes() {
     });
 }
 
-let _pagoReciboId = null;
-let _pagoSaldoTotal = 0;
-
-function pagarRecibo(idRecibo, saldo) {
-    _pagoReciboId = idRecibo;
-    _pagoSaldoTotal = saldo;
-    const montoInput = document.getElementById('modalPagoMonto');
-    const errorEl = document.getElementById('modalPagoError');
-    document.getElementById('modalPagoSaldo').textContent = `Saldo pendiente: S/ ${saldo.toFixed(2)}`;
-    montoInput.value = '';
-    montoInput.max = saldo;
-    errorEl.style.display = 'none';
-    document.getElementById('modalPago').classList.remove('hidden');
-    montoInput.focus();
-}
-
-function usarMontoTotal() {
-    document.getElementById('modalPagoMonto').value = _pagoSaldoTotal.toFixed(2);
-    document.getElementById('modalPagoError').style.display = 'none';
-}
-
-function cerrarModalPago() {
-    document.getElementById('modalPago').classList.add('hidden');
-    _pagoReciboId = null;
-}
-
-async function confirmarPago() {
-    const montoStr = document.getElementById('modalPagoMonto').value;
-    const errorEl = document.getElementById('modalPagoError');
-    const monto = parseFloat(montoStr);
-
-    if (Number.isNaN(monto) || monto <= 0) {
-        errorEl.textContent = 'Ingrese un monto válido mayor a cero.';
-        errorEl.style.display = 'block';
-        return;
-    }
-    if (monto > _pagoSaldoTotal + 0.001) {
-        errorEl.textContent = `El monto no puede exceder el saldo (S/ ${_pagoSaldoTotal.toFixed(2)}).`;
-        errorEl.style.display = 'block';
-        return;
-    }
-
-    const { response, data } = await apiFetch(`/recibos/${_pagoReciboId}/pagar`, {
-        method: 'POST',
-        body: JSON.stringify({ monto })
-    });
-
-    if (!response.ok) {
-        errorEl.textContent = data.error || 'No se pudo procesar el pago.';
-        errorEl.style.display = 'block';
-        return;
-    }
-
-    cerrarModalPago();
-    showToast('Pago registrado correctamente', 'success');
-    await cargarEstadisticas();
-}
+// El pago en línea (pagarRecibo) vive en js/pasarela.js
 
 // ========================================
 // RECIBOS PAGADOS
@@ -280,6 +227,12 @@ if (document.getElementById('formCambiarContrasena')) {
 
         mostrarMensaje('mensajePerfil', 'Contraseña cambiada exitosamente', 'success');
         document.getElementById('formCambiarContrasena').reset();
+        const usuario = getUserData();
+        if (usuario && usuario.debe_cambiar_contrasena) {
+            usuario.debe_cambiar_contrasena = false;
+            setUserData(usuario);
+            document.getElementById('avisoCambioClave')?.remove();
+        }
     });
 }
 
@@ -311,6 +264,15 @@ function cargarDatosSeccion(seccionId) {
         case 'comunicados':
             cargarComunicados();
             break;
+        case 'reservas':
+            cargarReservas();
+            break;
+        case 'asistente':
+            iniciarAsistente();
+            break;
+        case 'documentos':
+            cargarDocumentos();
+            break;
     }
 }
 
@@ -327,7 +289,26 @@ document.querySelectorAll('.sidebar-nav .nav-item').forEach(btn => {
 // INICIALIZACIÓN
 // ========================================
 
+// Si entró con la contraseña inicial (su DNI) se le pide cambiarla
+function avisarCambioContrasena() {
+    const usuario = getUserData();
+    if (!usuario || !usuario.debe_cambiar_contrasena || document.getElementById('avisoCambioClave')) return;
+    const aviso = document.createElement('div');
+    aviso.id = 'avisoCambioClave';
+    aviso.className = 'aviso-seguridad';
+    aviso.innerHTML = '<strong>Por tu seguridad cambia tu contraseña.</strong> Aún usas la contraseña inicial (tu DNI). '
+        + '<button type="button" class="btn btn-primary btn-sm">Cambiar ahora</button>';
+    aviso.querySelector('button').addEventListener('click', () => {
+        const btn = document.querySelector('.nav-item[data-section="perfil"]');
+        if (typeof mostrarSeccion === 'function') mostrarSeccion('perfil', btn);
+        document.getElementById('actualContrasena')?.focus();
+    });
+    const destino = document.querySelector('.panel-content') || document.body;
+    destino.prepend(aviso);
+}
+
 window.addEventListener('DOMContentLoaded', function() {
+    avisarCambioContrasena();
     cargarInformacionPersonal();
 });
 
@@ -355,24 +336,25 @@ function renderTablaRecibosPagados(items) {
     const tbody = document.getElementById('tablaRecibosPagados');
     if (!tbody) return;
     if (!items.length) {
-        tbody.innerHTML = `<tr><td colspan="11" class="empty-state">No hay recibos pagados</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="12" class="empty-state">No hay recibos pagados</td></tr>`;
         return;
     }
     tbody.innerHTML = items.map(r => `
         <tr>
             <td>${r.id}</td>
             <td>${formatMonthYear(r.fecha_emision)}</td>
-            <td>S/ ${(+r.total).toFixed(2)}</td>
-            <td>S/ ${(+(r.monto_pagado || 0)).toFixed(2)}</td>
-            <td>S/ ${(+(r.saldo || 0)).toFixed(2)}</td>
+            <td>S/\u00a0${(+r.total).toFixed(2)}</td>
+            <td>S/\u00a0${(+(r.monto_pagado || 0)).toFixed(2)}</td>
+            <td>S/\u00a0${(+(r.saldo || 0)).toFixed(2)}</td>
             <td>${formatDate(r.fecha_pago)}</td>
-            <td>S/ ${(+(r.monto_administracion || 0)).toFixed(2)}</td>
-            <td>S/ ${(+(r.monto_agua || 0)).toFixed(2)}</td>
-            <td>S/ ${(+(r.monto_luz || 0)).toFixed(2)}</td>
-            <td>S/ ${(+(r.monto_mantenimiento || 0)).toFixed(2)}</td>
+            <td>S/\u00a0${(+(r.monto_administracion || 0)).toFixed(2)}</td>
+            <td>S/\u00a0${(+(r.monto_agua || 0)).toFixed(2)}</td>
+            <td>S/\u00a0${(+(r.monto_luz || 0)).toFixed(2)}</td>
+            <td>S/\u00a0${(+(r.monto_mantenimiento || 0)).toFixed(2)}</td>
+            <td>S/\u00a0${(+(r.monto_reservas || 0)).toFixed(2)}</td>
             <td>
                 <button class="btn btn-secondary btn-sm" onclick="verComprobante(${r.id})" title="Ver comprobante">
-                    🧾
+                    ${window.iconoSvg ? iconoSvg('recibo') : '🧾'}
                 </button>
             </td>
         </tr>
@@ -454,7 +436,7 @@ function _renderComunicados(items) {
                 <div>
                     <span style="background:${bg};color:${color};padding:2px 8px;border-radius:12px;font-size:0.8rem;">${TIPO_LABEL[c.tipo] || c.tipo}</span>
                     ${!leido ? '<span style="background:#dc2626;color:white;padding:2px 8px;border-radius:12px;font-size:0.8rem;margin-left:4px;">Nuevo</span>' : ''}
-                    <h4 style="margin:0.5rem 0 0.25rem 0;">${c.titulo}</h4>
+                    <h4 style="margin:0.5rem 0 0.25rem 0;">${escapeHtml(c.titulo)}</h4>
                 </div>
                 <div style="text-align:right;">
                     <small style="color:#6b7280;">Publicado: ${c.fecha_publicacion || ''}</small>
@@ -462,7 +444,7 @@ function _renderComunicados(items) {
                     ${!leido ? `<br><button class="btn btn-secondary btn-sm" style="margin-top:4px;" onclick="marcarLeido(${c.id})">Marcar leído</button>` : '<br><small style="color:#16a34a;">✓ Leído</small>'}
                 </div>
             </div>
-            <p style="margin:0.5rem 0 0 0;color:#374151;">${c.contenido}</p>
+            <p style="margin:0.5rem 0 0 0;color:#374151;">${escapeHtml(c.contenido)}</p>
         </div>
         `;
     }).join('');

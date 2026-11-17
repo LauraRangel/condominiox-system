@@ -5,6 +5,9 @@ def jwt_secret() -> str:
     secret = os.getenv("JWT_SECRET")
     if not secret:
         raise RuntimeError("JWT_SECRET no está configurado")
+    if len(secret) < 32:
+        import warnings
+        warnings.warn("JWT_SECRET tiene menos de 32 caracteres: use uno largo y aleatorio en producción")
     return secret
 
 

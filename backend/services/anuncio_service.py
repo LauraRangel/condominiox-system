@@ -27,6 +27,8 @@ def crear_anuncio(titulo: str, contenido: str, tipo: str, fecha_caducidad=None):
         return None, "Datos incompletos"
     if tipo not in TIPOS_VALIDOS:
         return None, f"Tipo inválido. Use: {', '.join(TIPOS_VALIDOS)}"
+    if len(titulo.strip()) > 200 or len(contenido.strip()) > 5000:
+        return None, "El título admite 200 caracteres y el contenido 5000"
     row = anuncio_dao.create_anuncio(titulo.strip(), contenido.strip(), tipo, fecha_caducidad or None)
     if row:
         _serializar(row)

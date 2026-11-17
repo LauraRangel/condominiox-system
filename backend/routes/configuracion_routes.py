@@ -1,6 +1,6 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
-from middleware import get_payload, require_roles, auth_response
+from middleware import get_payload, require_roles, auth_response, json_body
 from services import configuracion_service
 
 bp = Blueprint("configuracion", __name__)
@@ -26,7 +26,7 @@ def actualizar_configuracion():
     if role_err:
         return auth_response(role_err)
 
-    body = request.get_json(silent=True) or {}
+    body = json_body()
     monto = body.get("monto_administracion")
     if monto is None:
         return jsonify({"error": "Monto de administración requerido"}), 400

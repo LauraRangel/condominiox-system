@@ -2,10 +2,17 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; frame-src blob: https://www.youtube-nocookie.com; connect-src 'self' http://localhost:5000 http://127.0.0.1:5000 https://condominiox-system.onrender.com; object-src 'none'; base-uri 'self'; form-action 'self'">
+    <meta name="referrer" content="no-referrer">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Panel de Administrador - CondominioX">
     <title>Panel Administrador - CondominioX</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
     <link rel="stylesheet" href="css/styles.css?v=20260716">
+    <link rel="stylesheet" href="css/innovacion.css?v=20261116">
+    <link rel="stylesheet" href="css/moderno.css?v=20261116">
 </head>
 <body>
     <div class="app-container">
@@ -35,9 +42,17 @@
                     <span class="nav-icon">📋</span>
                     <span>Recibos</span>
                 </button>
+                <button class="nav-item" data-section="enlinea" onclick="mostrarSeccion('enlinea', this)">
+                    <span class="nav-icon">💳</span>
+                    <span>Pagos y Reservas</span>
+                </button>
                 <button class="nav-item" data-section="anuncios" onclick="mostrarSeccion('anuncios', this)">
                     <span class="nav-icon">📢</span>
                     <span>Anuncios</span>
+                </button>
+                <button class="nav-item" data-section="documentos" onclick="mostrarSeccion('documentos', this)">
+                    <span class="nav-icon">📁</span>
+                    <span>Documentos</span>
                 </button>
                 <button class="nav-item" data-section="perfil" onclick="mostrarSeccion('perfil', this)">
                     <span class="nav-icon">⚙️</span>
@@ -260,7 +275,7 @@
                             <div class="form-group" id="grupoContrasenaPropietario">
                                 <label for="propContrasena">Contraseña *</label>
                                 <div class="password-toggle-field">
-                                    <input type="password" id="propContrasena" required minlength="6">
+                                    <input type="password" id="propContrasena" required minlength="8">
                                     <button type="button" class="password-toggle-btn" data-target="propContrasena">Ver</button>
                                 </div>
                             </div>
@@ -537,6 +552,103 @@
             </section>
 
             <!-- Anuncios CU13 -->
+            <!-- Pagos en línea, reservas y uso del asistente (APF3) -->
+            <section id="enlinea-section" class="panel-section">
+                <div class="section-header">
+                    <h2>Pagos en línea y Reservas</h2>
+                    <p>Transacciones conciliadas por la pasarela, configuración de áreas comunes y reservas</p>
+                </div>
+
+                <div class="filtros-enlinea">
+                    <div class="filtros-fila">
+                        <label>Desde <input type="date" id="fDesde" onchange="aplicarFiltrosEnLinea()"></label>
+                        <label>Hasta <input type="date" id="fHasta" onchange="aplicarFiltrosEnLinea()"></label>
+                        <label>Área
+                            <select id="fArea" onchange="aplicarFiltrosEnLinea()"><option value="">Todas las áreas</option></select>
+                        </label>
+                        <label>Persona <input type="search" id="fPersona" placeholder="Nombre o apellido" oninput="aplicarFiltrosEnLinea()"></label>
+                        <label>Depto. <input type="search" id="fDepto" placeholder="Ej.: 301 o 301A" oninput="aplicarFiltrosEnLinea()"></label>
+                    </div>
+                    <div class="filtros-fila">
+                        <label>Pago
+                            <select id="fConcepto" onchange="aplicarFiltrosEnLinea()">
+                                <option value="">Todos los conceptos</option>
+                                <option value="recibo">Recibos</option>
+                                <option value="garantia">Garantías</option>
+                                <option value="devolucion">Devoluciones</option>
+                            </select>
+                        </label>
+                        <label>Estado del pago
+                            <select id="fEstadoPago" onchange="aplicarFiltrosEnLinea()">
+                                <option value="">Todos</option>
+                                <option value="aprobado">Aprobados</option>
+                                <option value="rechazado">Rechazados</option>
+                                <option value="devuelto">Devueltos</option>
+                            </select>
+                        </label>
+                        <label>Estado de la reserva
+                            <select id="fEstadoReserva" onchange="aplicarFiltrosEnLinea()">
+                                <option value="">Todos</option>
+                                <option value="confirmada">Confirmadas</option>
+                                <option value="pendiente_garantia">Falta garantía</option>
+                                <option value="garantia_custodia">Garantía en custodia</option>
+                                <option value="cancelada">Canceladas</option>
+                                <option value="expirada">Vencidas</option>
+                            </select>
+                        </label>
+                        <div class="filtros-rapidos-enlinea">
+                            <button type="button" onclick="filtroRapido(0)">Hoy</button>
+                            <button type="button" onclick="filtroRapido(7)">7 días</button>
+                            <button type="button" onclick="filtroRapido('mes')">Este mes</button>
+                        </div>
+                    </div>
+                    <div class="filtros-pie">
+                        <span id="fResumen"></span>
+                        <button type="button" class="btn btn-secondary btn-sm hidden" id="btnLimpiarFiltros" onclick="limpiarFiltrosEnLinea()">Limpiar filtros</button>
+                    </div>
+                </div>
+
+                <div class="kpi-row">
+                    <div class="kpi"><span>Pagos aprobados</span><strong id="kpiAprobadas">0</strong></div>
+                    <div class="kpi"><span>Pagos rechazados</span><strong id="kpiRechazadas">0</strong></div>
+                    <div class="kpi"><span>Monto conciliado</span><strong id="kpiConciliado">S/ 0.00</strong></div>
+                    <div class="kpi"><span>Reservas confirmadas</span><strong id="kpiReservas">0</strong></div>
+                    <div class="kpi"><span>Garantías en custodia</span><strong id="kpiCustodia">S/ 0.00</strong></div>
+                </div>
+
+                <h3 class="admin-subtitulo">Transacciones de la pasarela</h3>
+                <div class="data-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Fecha</th><th>Propietario</th><th>Depto.</th><th>Concepto</th><th>Medio</th><th>Monto</th><th>Estado</th><th>Código de operación</th></tr>
+                        </thead>
+                        <tbody id="tablaTransacciones"><tr><td colspan="8" class="empty-state">Sin transacciones</td></tr></tbody>
+                    </table>
+                </div>
+
+                <h3 class="admin-subtitulo">Reservas de áreas comunes</h3>
+                <div class="data-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Fecha</th><th>Horario</th><th>Área</th><th>Propietario</th><th>Depto.</th><th>Asist.</th><th>Tarifa</th><th>Garantía</th><th>Estado</th><th></th></tr>
+                        </thead>
+                        <tbody id="tablaReservasAdmin"><tr><td colspan="10" class="empty-state">Sin reservas</td></tr></tbody>
+                    </table>
+                </div>
+
+
+                <h3 class="admin-subtitulo">Configuración de áreas comunes</h3>
+                <p class="admin-ayuda">Los cambios aplican a las reservas nuevas; las ya confirmadas conservan su cargo. El asistente informa siempre los valores vigentes.</p>
+                <div class="data-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Área</th><th>Tarifa</th><th>Garantía</th><th>Uso</th><th>Aforo</th><th>Horario</th><th>Anticipación</th><th>Duración máx.</th><th>Estado</th><th></th></tr>
+                        </thead>
+                        <tbody id="tablaAreasAdmin"><tr><td colspan="10" class="empty-state">Cargando...</td></tr></tbody>
+                    </table>
+                </div>
+            </section>
+
             <section id="anuncios-section" class="panel-section">
                 <div class="section-header">
                     <h2>Gestión de Anuncios</h2>
@@ -652,6 +764,54 @@
             </div>
 
             <!-- Perfil -->
+            <!-- Documentos del condominio (PDF en PostgreSQL) -->
+            <section id="documentos-section" class="panel-section">
+                <div class="section-header">
+                    <h2>Documentos del condominio</h2>
+                    <p>Sube PDFs (actas, manuales, presupuestos). Los públicos los ven los propietarios y el asistente IA los usa como fuente.</p>
+                </div>
+
+                <div class="doc-subir form-card">
+                    <div class="form-card-header"><h3>Subir documento</h3></div>
+                    <form class="panel-form doc-form" onsubmit="subirDocumento(event)">
+                        <label class="doc-drop" id="docDrop">
+                            <input type="file" id="docArchivo" accept="application/pdf,.pdf" hidden onchange="archivoElegido(this.files[0])">
+                            <span class="doc-drop-ico">📄</span>
+                            <span id="docDropTexto"><b>Elige un PDF</b> o arrástralo aquí<br><small>Máximo 5 MB</small></span>
+                        </label>
+                        <div class="doc-campos">
+                            <div class="form-group">
+                                <label for="docTitulo">Título</label>
+                                <input type="text" id="docTitulo" maxlength="150" required placeholder="Ej.: Acta de Junta - Octubre 2026">
+                            </div>
+                            <div class="form-row-2">
+                                <div class="form-group">
+                                    <label for="docCategoria">Categoría</label>
+                                    <select id="docCategoria">
+                                        <option value="acta">Acta de junta</option>
+                                        <option value="reglamento">Reglamento</option>
+                                        <option value="manual">Manual de uso</option>
+                                        <option value="presupuesto">Presupuesto</option>
+                                        <option value="otro">Otro</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="docDescripcion">Descripción (opcional)</label>
+                                    <input type="text" id="docDescripcion" maxlength="300">
+                                </div>
+                            </div>
+                            <label class="check-activo"><input type="checkbox" id="docPublico" checked> Visible para los propietarios y para el asistente IA</label>
+                            <div id="docError" class="modal-error" style="display:none;"></div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary" id="btnSubirDoc">Subir documento</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div id="listaDocumentos" class="doc-grid"></div>
+            </section>
+
             <section id="perfil-section" class="panel-section">
                 <div class="section-header">
                     <h2>Mi Perfil</h2>
@@ -666,22 +826,22 @@
                         <div class="form-group">
                             <label for="actualContrasena">Contraseña Actual *</label>
                             <div class="password-toggle-field">
-                                <input type="password" id="actualContrasena" required minlength="6">
+                                <input type="password" id="actualContrasena" required minlength="8">
                                 <button type="button" class="password-toggle-btn" data-target="actualContrasena">Ver</button>
                             </div>
                         </div>
                         <div class="form-group">
                             <label for="nuevaContrasena">Nueva Contraseña *</label>
                             <div class="password-toggle-field">
-                                <input type="password" id="nuevaContrasena" required minlength="6">
+                                <input type="password" id="nuevaContrasena" required minlength="8">
                                 <button type="button" class="password-toggle-btn" data-target="nuevaContrasena">Ver</button>
                             </div>
-                            <small>Mínimo 6 caracteres</small>
+                            <small>Mínimo 8 caracteres, con letras y números</small>
                         </div>
                         <div class="form-group">
                             <label for="confirmarContrasena">Confirmar Contraseña *</label>
                             <div class="password-toggle-field">
-                                <input type="password" id="confirmarContrasena" required minlength="6">
+                                <input type="password" id="confirmarContrasena" required minlength="8">
                                 <button type="button" class="password-toggle-btn" data-target="confirmarContrasena">Ver</button>
                             </div>
                         </div>
@@ -819,9 +979,120 @@
         </div>
     </div>
 
-    <script src="js/config.js?v=20260716"></script>
+    <!-- Modal: resolver garantía -->
+    <div id="modalGarantia" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modalGarantiaTitulo">
+        <div class="modal-card area-modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3><span class="modal-icon success">🛡️</span><span id="modalGarantiaTitulo">Devolver garantía</span></h3>
+                <button type="button" class="btn-close" onclick="cerrarModalGarantia()" aria-label="Cerrar">×</button>
+            </div>
+            <form class="modal-body panel-form" onsubmit="resolverGarantia(event)">
+                <p id="garantiaResumen" class="garantia-resumen"></p>
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label for="garantiaRetener">Monto a retener (S/)</label>
+                        <input type="number" id="garantiaRetener" min="0" step="0.01" value="0" oninput="actualizarDevolucion()">
+                    </div>
+                    <div class="form-group">
+                        <label>Se devuelve al propietario</label>
+                        <div id="garantiaADevolver" class="monto-devolver">S/ 0.00</div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="garantiaMotivo">Motivo de la retención (obligatorio si se retiene algo)</label>
+                    <input type="text" id="garantiaMotivo" maxlength="300" placeholder="Ej.: limpieza adicional, vaso roto">
+                </div>
+                <div id="garantiaError" class="modal-error" style="display:none;"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="cerrarModalGarantia()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btnResolverGarantia">Confirmar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: editar área común -->
+    <div id="modalArea" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modalAreaTitulo">
+        <div class="modal-card area-modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3><span class="modal-icon success">📅</span><span id="modalAreaTitulo">Editar área común</span></h3>
+                <button type="button" class="btn-close" onclick="cerrarModalArea()" aria-label="Cerrar">×</button>
+            </div>
+            <form class="modal-body panel-form" id="formArea" onsubmit="guardarArea(event)">
+                <div class="form-group">
+                    <label for="areaNombre">Nombre</label>
+                    <input type="text" id="areaNombre" maxlength="80" required>
+                </div>
+                <div class="form-group">
+                    <label for="areaDescripcion">Descripción</label>
+                    <input type="text" id="areaDescripcion" maxlength="300">
+                </div>
+                <div class="form-row-3">
+                    <div class="form-group">
+                        <label for="areaTarifa">Tarifa (S/)</label>
+                        <input type="number" id="areaTarifa" min="0" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="areaAforo">Aforo (personas)</label>
+                        <input type="number" id="areaAforo" min="1" max="500" required>
+                    </div>
+                </div>
+                <div class="form-row-3">
+                    <div class="form-group">
+                        <label for="areaDuracion">Duración máx. (h)</label>
+                        <input type="number" id="areaDuracion" min="1" max="24" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="areaGarantia">Garantía (S/)</label>
+                        <input type="number" id="areaGarantia" min="0" step="0.01" required>
+                    </div>
+                </div>
+                <div class="form-row-3">
+                    <div class="form-group">
+                        <label for="areaApertura">Apertura</label>
+                        <input type="time" id="areaApertura" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="areaCierre">Cierre</label>
+                        <input type="time" id="areaCierre" required>
+                    </div>
+                </div>
+                <div class="form-group" style="max-width:200px;">
+                    <label for="areaAnticipacion">Anticipación (h)</label>
+                    <input type="number" id="areaAnticipacion" min="0" max="720" required>
+                </div>
+                <label class="check-activo"><input type="checkbox" id="areaExclusivo"> Uso exclusivo (una reserva por horario). Si se desmarca, varios residentes comparten el horario hasta llenar el aforo.</label>
+                <label class="check-activo"><input type="checkbox" id="areaActivo"> Área activa (disponible para reservar)</label>
+                <div id="areaError" class="modal-error" style="display:none;"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="cerrarModalArea()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btnGuardarArea">Guardar cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Visor de PDF -->
+    <div id="modalVisorPdf" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="visorTitulo" onclick="cerrarVisorPdf()">
+        <div class="modal-card visor-card" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3><span class="modal-icon success">📄</span><span id="visorTitulo">Documento</span></h3>
+                <div class="visor-acciones">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="descargarPdfActual()">Descargar</button>
+                    <button type="button" class="btn-close" onclick="cerrarVisorPdf()" aria-label="Cerrar">×</button>
+                </div>
+            </div>
+            <iframe id="visorFrame" title="Visor de PDF"></iframe>
+        </div>
+    </div>
+
+    <script src="js/config.js?v=20261116"></script>
     <script src="js/auth.js?v=20260716"></script>
-    <script src="js/admin.js?v=20260716"></script>
+    <script src="js/admin.js?v=20261116"></script>
+    <script src="js/areas-img.js?v=20261116"></script>
+    <script src="js/invitados.js?v=20261116"></script>
+    <script src="js/documentos.js?v=20261116"></script>
+    <script src="js/admin-enlinea.js?v=20261116"></script>
     <script>
         // Override mostrarSeccion para el nuevo diseño
         function mostrarSeccion(seccionId, btn) {
@@ -832,7 +1103,10 @@
             if (btn) btn.classList.add('active');
 
             if (seccionId === 'anuncios') cargarAnuncios();
+            if (seccionId === 'enlinea') cargarPanelEnLinea();
+            if (seccionId === 'documentos') cargarDocumentos();
         }
     </script>
+    <script src="js/ui-moderno.js?v=20261116"></script>
 </body>
 </html>

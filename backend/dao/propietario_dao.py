@@ -1,4 +1,4 @@
-from db import fetch_all, fetch_one, execute, execute_returning, get_db
+from db import fetch_all, fetch_one, execute_returning, get_db
 
 
 def get_all_propietarios():

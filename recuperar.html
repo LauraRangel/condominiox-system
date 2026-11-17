@@ -2,10 +2,16 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; frame-src blob: https://www.youtube-nocookie.com; connect-src 'self' http://localhost:5000 http://127.0.0.1:5000 https://condominiox-system.onrender.com; object-src 'none'; base-uri 'self'; form-action 'self'">
+    <meta name="referrer" content="no-referrer">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Recuperar Contraseña - CondominioX">
     <title>Recuperar Contraseña - CondominioX</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
     <link rel="stylesheet" href="css/styles.css?v=20260716">
+    <link rel="stylesheet" href="css/moderno.css?v=20261116">
 </head>
 <body>
     <div class="recuperar-container">
@@ -48,11 +54,11 @@
                             name="nuevaContrasena"
                             placeholder="Ingrese nueva contraseña"
                             required
-                            minlength="6"
+                            minlength="8"
                         >
                         <button type="button" class="password-toggle-btn" data-target="nuevaContrasena">Ver</button>
                     </div>
-                    <small>Mínimo 6 caracteres</small>
+                    <small>Mínimo 8 caracteres, con letras y números</small>
                 </div>
 
                 <div class="form-group">
@@ -64,7 +70,7 @@
                             name="confirmarContrasena"
                             placeholder="Confirme la contraseña"
                             required
-                            minlength="6"
+                            minlength="8"
                         >
                         <button type="button" class="password-toggle-btn" data-target="confirmarContrasena">Ver</button>
                     </div>
@@ -79,7 +85,7 @@
         </div>
     </div>
 
-    <script src="js/config.js?v=20260716"></script>
+    <script src="js/config.js?v=20261116"></script>
     <script src="js/auth.js?v=20260716"></script>
     <script>
         document.getElementById('formRecuperar').addEventListener('submit', async function(e) {
@@ -135,5 +141,6 @@
             }
         });
     </script>
+    <script src="js/ui-moderno.js?v=20261116"></script>
 </body>
 </html>
