@@ -50,7 +50,7 @@ def get_gastos_mes_por_tipo(mes):
 def get_areas_activas():
     return fetch_all(
         """
-        SELECT nombre, aforo, tarifa, garantia, uso_exclusivo, hora_apertura, hora_cierre,
+        SELECT id, nombre, aforo, tarifa, garantia, uso_exclusivo, hora_apertura, hora_cierre,
                anticipacion_min_horas, duracion_max_horas
         FROM areas_comunes WHERE activo = TRUE ORDER BY id
         """

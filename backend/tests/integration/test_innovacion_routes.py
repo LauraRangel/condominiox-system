@@ -197,6 +197,27 @@ class TestAsistente:
         resp = client.post("/api/asistente/consulta", headers=_h(admin_token), json={"pregunta": "hola"})
         assert resp.status_code == 403
 
+    def test_responde_disponibilidad_de_un_area(self, client, propietario_token):
+        area = _area("Zona de parrillas")
+        fecha = dt.datetime.now(LIMA).date() + dt.timedelta(days=3)
+        resp = client.post("/api/reservas", headers=_h(propietario_token), json={
+            "area_id": area["id"], "fecha": fecha.isoformat(), "hora_inicio": "13:00",
+            "hora_fin": "16:00", "asistentes": 5})
+        assert resp.status_code == 201, resp.get_json()
+        meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
+                 "septiembre", "octubre", "noviembre", "diciembre"]
+        cuando = f"el {fecha.day} de {meses[fecha.month - 1]}"
+
+        data = client.post("/api/asistente/consulta", headers=_h(propietario_token),
+                           json={"pregunta": f"¿Hay horario disponible en la zona de parrillas a las 2pm {cuando}?"}).get_json()
+        assert "A las 14:00 está OCUPADA" in data["respuesta"]
+        assert any(f["tipo"] == "disponibilidad" for f in data["fuentes"])
+
+        data = client.post("/api/asistente/consulta", headers=_h(propietario_token),
+                           json={"pregunta": f"¿Está libre la zona de parrillas a las 11 de la mañana {cuando}?"}).get_json()
+        assert "A las 11:00 está LIBRE" in data["respuesta"]
+        assert "hasta las 13:00" in data["respuesta"]
+
     def test_queda_registro_de_auditoria(self, client, propietario_token):
         client.post("/api/asistente/consulta", headers=_h(propietario_token), json={"pregunta": "horario de silencio"})
         row = fetch_one("SELECT COUNT(*) AS n FROM consultas_asistente")
@@ -220,6 +241,15 @@ class TestAsistenteConLLM:
         # minimización de datos: el DNI y el correo nunca se envían al LLM
         assert "12345678" not in capturado["user"]
         assert "jperez@example.com" not in capturado["user"]
+
+
+    def test_citas_con_caracteres_invisibles_se_reconocen(self, client, propietario_token, monkeypatch):
+        monkeypatch.setattr("services.asistente_service.completar",
+                            lambda s, u: ("Abre a las 06:00\u202fa.m. [\u200bF1].", "groq/openai/gpt-oss-120b"))
+        data = client.post("/api/asistente/consulta", headers=_h(propietario_token),
+                           json={"pregunta": "¿A qué hora abre el gimnasio?"}).get_json()
+        assert data["respuesta"] == "Abre a las 06:00 a.m. [F1]."
+        assert [f["id"] for f in data["fuentes"]] == ["F1"]
 
 
 def _area_body(area_id, client, token, **cambios):
