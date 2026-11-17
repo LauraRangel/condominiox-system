@@ -1,4 +1,4 @@
-from db import fetch_all, fetch_one, execute_returning, execute
+from db import fetch_all, execute_returning, execute
 
 
 def get_all_anuncios():

@@ -27,7 +27,7 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://test:test@localhost:5432/condominiox_test
-      JWT_SECRET: test-secret-not-for-prod
+      JWT_SECRET: test-secret-not-for-prod-ci-0123456789abcdef
       JWT_EXPIRES_SECONDS: "3600"
 
     steps:

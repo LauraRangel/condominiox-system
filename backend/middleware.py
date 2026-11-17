@@ -73,3 +73,12 @@ def require_roles(payload, *roles):
 
 def auth_response(err):
     return jsonify({"error": err[0]}), err[1]
+
+
+def json_body() -> dict:
+    """Cuerpo JSON siempre como dict. Números sueltos pasan a texto para que .strip() no falle."""
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        return {}
+    return {k: (str(v) if isinstance(v, (int, float)) and not isinstance(v, bool) else v)
+            for k, v in body.items()}

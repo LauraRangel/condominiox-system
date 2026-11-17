@@ -1,5 +1,8 @@
 // URL base del backend
-const API_URL = 'https://condominiox-system.onrender.com/api';
+// En local (localhost) apunta al backend de desarrollo; en GitHub Pages, a Render
+const API_URL = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+    ? 'http://localhost:5000/api'
+    : 'https://condominiox-system.onrender.com/api';
 window.API_URL = API_URL;
 
 // Configuración de almacenamiento local
@@ -13,7 +16,7 @@ async function apiFetch(path, options = {}) {
     if (token) {
         headers.set('Authorization', `Bearer ${token}`);
     }
-    if (!headers.has('Content-Type') && options.body) {
+    if (!headers.has('Content-Type') && options.body && !(options.body instanceof FormData)) {
         headers.set('Content-Type', 'application/json');
     }
 
@@ -31,6 +34,13 @@ async function apiFetch(path, options = {}) {
     const data = await response.json().catch(() => ({}));
     return { response, data };
 }
+
+// Escapa texto antes de insertarlo como HTML (evita XSS con datos de usuarios)
+function escapeHtml(valor) {
+    return String(valor ?? '').replace(/[&<>"'`]/g, c =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;' }[c]));
+}
+window.escapeHtml = escapeHtml;
 
 // Helper para obtener el token
 function getAuthToken() {
@@ -109,7 +119,7 @@ function formatMonthYear(dateString) {
 
 // Formatear moneda
 function formatCurrency(amount) {
-    return `S/ ${parseFloat(amount).toFixed(2)}`;
+    return `S/\u00a0${parseFloat(amount).toFixed(2)}`;
 }
 
 // ========================================
@@ -177,8 +187,8 @@ function showToast(message, type = 'info', title = '') {
     toast.innerHTML = `
         <span class="toast-icon">${icons[type] || icons.info}</span>
         <div class="toast-body">
-            <p class="toast-title">${title || titles[type] || ''}</p>
-            <p class="toast-message">${message}</p>
+            <p class="toast-title">${escapeHtml(title || titles[type] || '')}</p>
+            <p class="toast-message">${escapeHtml(message)}</p>
         </div>
         <button class="toast-close" onclick="this.closest('.toast').remove()">✕</button>
     `;
@@ -202,7 +212,7 @@ async function verComprobante(reciboId) {
     }
 
     const r = data;
-    const total = (+r.monto_administracion) + (+r.monto_agua) + (+r.monto_luz) + (+r.monto_mantenimiento);
+    const total = (+r.monto_administracion) + (+r.monto_agua) + (+r.monto_luz) + (+r.monto_mantenimiento) + (+(r.monto_reservas || 0));
     const saldo = r.saldo !== undefined ? +r.saldo : (total - (+r.monto_pagado || 0));
     const pagado = r.pagado;
     const prop = r.propietario || {};
@@ -224,19 +234,19 @@ async function verComprobante(reciboId) {
             <div class="comprobante-meta">
                 <div class="comprobante-meta-item">
                     <span>Propietario</span>
-                    <span>${prop.nombre || ''} ${prop.apellido || ''}</span>
+                    <span>${escapeHtml(prop.nombre || '')} ${escapeHtml(prop.apellido || '')}</span>
                 </div>
                 <div class="comprobante-meta-item">
                     <span>DNI</span>
-                    <span>${prop.dni || '—'}</span>
+                    <span>${escapeHtml(prop.dni || '—')}</span>
                 </div>
                 <div class="comprobante-meta-item">
                     <span>Departamento</span>
-                    <span>${r.nro_departamento || '—'}</span>
+                    <span>${escapeHtml(r.nro_departamento || '—')}</span>
                 </div>
                 <div class="comprobante-meta-item">
                     <span>Torre</span>
-                    <span>${r.torre || '—'}</span>
+                    <span>${escapeHtml(r.torre || '—')}</span>
                 </div>
                 <div class="comprobante-meta-item">
                     <span>Fecha de emisión</span>
@@ -262,6 +272,7 @@ async function verComprobante(reciboId) {
                     <tr><td>Agua</td><td style="text-align:right;">${formatCurrency(r.monto_agua)}</td></tr>
                     <tr><td>Luz</td><td style="text-align:right;">${formatCurrency(r.monto_luz)}</td></tr>
                     <tr><td>Mantenimiento</td><td style="text-align:right;">${formatCurrency(r.monto_mantenimiento)}</td></tr>
+                    ${(+(r.monto_reservas || 0)) > 0 ? `<tr><td>Reserva de áreas comunes</td><td style="text-align:right;">${formatCurrency(r.monto_reservas)}</td></tr>` : ''}
                     <tr>
                         <td>TOTAL</td>
                         <td style="text-align:right;">${formatCurrency(total)}</td>

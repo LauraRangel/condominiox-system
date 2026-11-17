@@ -1,0 +1,136 @@
+{
+  "titulo": "Reglamento Interno de ejemplo - Edificio residencial (CondominioX)",
+  "nota": "Documento de demostración. Cada condominio carga su propio reglamento aprobado por la Junta de Propietarios.",
+  "articulos": [
+    {
+      "numero": 1,
+      "titulo": "Objeto del reglamento",
+      "contenido": "El presente reglamento regula la convivencia, el uso de los bienes y áreas comunes, las cuotas de mantenimiento y los derechos y obligaciones de los propietarios y residentes del edificio, en concordancia con la Ley N.° 27157 y su reglamento."
+    },
+    {
+      "numero": 2,
+      "titulo": "Junta de Propietarios",
+      "contenido": "La Junta de Propietarios está integrada por todos los propietarios de las unidades inmobiliarias. Se reúne en sesión ordinaria una vez al año y en sesión extraordinaria cuando lo convoque el presidente o lo soliciten propietarios que representen al menos el 25 % de las participaciones."
+    },
+    {
+      "numero": 3,
+      "titulo": "Administración",
+      "contenido": "La administración del edificio está a cargo del administrador designado por la Junta. Sus funciones incluyen emitir los recibos mensuales, registrar pagos y gastos, publicar comunicados y presentar el estado financiero mensual a los propietarios."
+    },
+    {
+      "numero": 4,
+      "titulo": "Cuota de mantenimiento",
+      "contenido": "Cada propietario paga una cuota mensual compuesta por el monto de administración aprobado por la Junta y su parte de los gastos comunes del mes (agua, luz de áreas comunes y mantenimiento). Los gastos comunes se distribuyen en partes iguales entre las unidades registradas."
+    },
+    {
+      "numero": 5,
+      "titulo": "Fecha de pago",
+      "contenido": "El recibo mensual se emite durante la primera semana del mes y debe pagarse dentro de los 15 días calendario siguientes a su emisión. Se acepta el pago total o pagos parciales a cuenta, que se aplican primero a los gastos más antiguos del mes."
+    },
+    {
+      "numero": 6,
+      "titulo": "Medios de pago",
+      "contenido": "Los pagos se realizan a través de la plataforma CondominioX con Yape, tarjeta de crédito o débito, o Mercado Pago. Cada pago genera un código de operación y un comprobante digital. La administración puede registrar pagos en efectivo o por transferencia, emitiendo también el comprobante."
+    },
+    {
+      "numero": 7,
+      "titulo": "Morosidad",
+      "contenido": "Se considera moroso al propietario que mantiene un recibo sin pagar por más de 30 días desde su emisión. El propietario moroso no puede reservar áreas comunes hasta regularizar su deuda y figura en el reporte de morosidad que la administración presenta a la Junta."
+    },
+    {
+      "numero": 8,
+      "titulo": "Áreas comunes",
+      "contenido": "Son áreas comunes el salón de usos múltiples, la zona de parrillas, el gimnasio, el cowork, el pet shower, los pasillos, el hall de ingreso, las escaleras y los ascensores. Su uso es compartido y su cuidado es responsabilidad de todos los residentes."
+    },
+    {
+      "numero": 9,
+      "titulo": "Reserva de áreas comunes",
+      "contenido": "Las áreas comunes reservables se reservan únicamente a través de la plataforma, indicando fecha, horario y número de asistentes. La reserva se confirma solo si el área está activa y libre en ese horario, se respetan el aforo, el horario, la anticipación mínima y la duración máxima del área, y el propietario no tiene deuda vencida."
+    },
+    {
+      "numero": 10,
+      "titulo": "Tarifas de reserva",
+      "contenido": "Cada área común puede tener una tarifa por reserva, fijada por la administración y publicada en la plataforma, destinada al mantenimiento y limpieza del espacio. Algunas áreas pueden no tener costo. El cargo se agrega automáticamente al recibo del mes en que se usa el área. Un cambio de tarifa solo se aplica a las reservas nuevas; las ya confirmadas conservan su cargo."
+    },
+    {
+      "numero": 11,
+      "titulo": "Anticipación, aforo y duración",
+      "contenido": "La administración fija para cada área común el aforo máximo, la anticipación mínima con que debe reservarse y la duración máxima de cada reserva. Estos valores se publican en la plataforma y el sistema los verifica al registrar cada reserva."
+    },
+    {
+      "numero": 12,
+      "titulo": "Cancelación de reservas",
+      "contenido": "El propietario puede cancelar su reserva desde la plataforma antes de la hora de inicio; en ese caso el cargo se descuenta de su recibo. Si el recibo con el cargo ya fue pagado, la devolución se solicita a la administración."
+    },
+    {
+      "numero": 13,
+      "titulo": "Horario de uso y limpieza de las áreas",
+      "contenido": "Cada área común tiene un horario de uso definido por la administración y publicado en la plataforma. La administración puede desactivar temporalmente un área por mantenimiento. Al terminar, el responsable de la reserva debe dejar el área limpia y ordenada; los daños se cargan a su recibo previa verificación de la administración."
+    },
+    {
+      "numero": 14,
+      "titulo": "Ruidos y horario de silencio",
+      "contenido": "Entre las 22:00 y las 8:00 horas se debe evitar ruidos molestos, música a alto volumen y trabajos de remodelación. Los fines de semana las remodelaciones solo se permiten los sábados de 9:00 a 13:00 horas."
+    },
+    {
+      "numero": 15,
+      "titulo": "Mascotas",
+      "contenido": "Se permite la tenencia de mascotas domésticas. En las áreas comunes deben circular con correa y el dueño debe recoger sus desechos. Las mascotas no pueden permanecer en el salón de usos múltiples, la zona de parrillas, el gimnasio ni el cowork. Para bañarlas se debe usar exclusivamente el pet shower, previa reserva en la plataforma."
+    },
+    {
+      "numero": 16,
+      "titulo": "Estacionamientos",
+      "contenido": "Cada estacionamiento es de uso exclusivo de la unidad a la que pertenece. Está prohibido estacionar en zonas de circulación o en espacios de visitas por más de 4 horas. El lavado de vehículos solo se realiza en el área designada."
+    },
+    {
+      "numero": 17,
+      "titulo": "Visitas",
+      "contenido": "Las visitas deben registrarse en recepción y ser autorizadas por el residente. Los proveedores y personal de servicio ingresan de lunes a sábado de 8:00 a 18:00 horas."
+    },
+    {
+      "numero": 18,
+      "titulo": "Residuos",
+      "contenido": "La basura se deposita en bolsas cerradas en el cuarto de residuos de cada piso, separando el material reciclable. Está prohibido dejar bolsas en pasillos o escaleras."
+    },
+    {
+      "numero": 19,
+      "titulo": "Comunicados",
+      "contenido": "Los comunicados oficiales de la administración se publican en la plataforma CondominioX y tienen una fecha de vigencia. Es responsabilidad de cada propietario revisarlos periódicamente."
+    },
+    {
+      "numero": 20,
+      "titulo": "Protección de datos personales",
+      "contenido": "Los datos personales de los propietarios se tratan conforme a la Ley N.° 29733 de Protección de Datos Personales. Cada propietario solo puede consultar su propia información financiera; la administración usa los datos únicamente para la gestión del edificio."
+    },
+    {
+      "numero": 21,
+      "titulo": "Asistente virtual",
+      "contenido": "La plataforma incluye un asistente virtual que responde consultas sobre este reglamento y sobre la información del propietario que consulta. El asistente no realiza pagos, reservas ni modificaciones, y sus respuestas no reemplazan los acuerdos de la Junta ni las decisiones de la administración."
+    },
+    {
+      "numero": 22,
+      "titulo": "Sanciones",
+      "contenido": "El incumplimiento del reglamento puede dar lugar a una amonestación escrita y, en caso de reincidencia, a una multa aprobada por la Junta de Propietarios, que se agrega al recibo mensual del infractor."
+    },
+    {
+      "numero": 23,
+      "titulo": "Garantía por reserva",
+      "contenido": "Algunas áreas comunes exigen una garantía, fijada por la administración y publicada en la plataforma, que se paga en línea al momento de reservar. La reserva queda pendiente y se confirma solo cuando se paga la garantía; si no se paga dentro de los 30 minutos siguientes, la reserva vence y el horario se libera. La garantía no forma parte del recibo mensual."
+    },
+    {
+      "numero": 24,
+      "titulo": "Devolución de la garantía",
+      "contenido": "Después del uso del área, la administración revisa su estado y devuelve la garantía por el mismo medio de pago. Si encuentra daños, faltantes o limpieza pendiente, puede retener una parte o el total, indicando el motivo, que queda registrado en la plataforma. Si el propietario cancela la reserva antes de la hora de inicio, la garantía se devuelve completa de forma automática."
+    },
+    {
+      "numero": 25,
+      "titulo": "Áreas de uso compartido",
+      "contenido": "El gimnasio y el cowork son de uso compartido: varios residentes pueden reservar el mismo horario mientras no se supere el aforo del área. Las demás áreas reservables son de uso exclusivo de quien las reserva. En el gimnasio se debe usar toalla y limpiar las máquinas después de usarlas; en el cowork se debe mantener silencio y no reservar espacios sin usarlos."
+    },
+    {
+      "numero": 26,
+      "titulo": "Pet shower",
+      "contenido": "El pet shower es el área destinada al baño y aseo de mascotas. Se reserva por turnos en la plataforma, debe dejarse limpio y sin pelos al terminar, y no se permite bañar a más de una mascota grande por turno."
+    }
+  ]
+}

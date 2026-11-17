@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 
-from middleware import get_payload, require_roles, auth_response
+from middleware import get_payload, require_roles, auth_response, json_body
 from services import propietario_service
 
 bp = Blueprint("propietarios", __name__)
@@ -41,7 +41,7 @@ def crear_propietario():
     if role_err:
         return auth_response(role_err)
 
-    body = request.get_json(silent=True) or {}
+    body = json_body()
     row, err = propietario_service.crear_propietario(body)
     if err:
         code = 409 if "Ya existe" in err else 400
@@ -58,7 +58,7 @@ def actualizar_propietario(propietario_id):
     if role_err:
         return auth_response(role_err)
 
-    body = request.get_json(silent=True) or {}
+    body = json_body()
     row, err = propietario_service.actualizar_propietario(propietario_id, body)
     if err == "not_found":
         return jsonify({"error": "Propietario no encontrado"}), 404

@@ -1,6 +1,6 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
-from middleware import get_payload, require_roles, auth_response
+from middleware import get_payload, require_roles, auth_response, json_body
 from services import anuncio_service
 
 bp = Blueprint("anuncios", __name__)
@@ -26,7 +26,7 @@ def crear_anuncio():
     if role_err:
         return auth_response(role_err)
 
-    body = request.get_json(silent=True) or {}
+    body = json_body()
     row, err = anuncio_service.crear_anuncio(
         body.get("titulo"), body.get("contenido"), body.get("tipo"), body.get("fecha_caducidad")
     )

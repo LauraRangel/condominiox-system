@@ -1,6 +1,6 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
-from middleware import get_payload, require_roles, auth_response
+from middleware import get_payload, require_roles, auth_response, json_body
 from services import gasto_service
 
 bp = Blueprint("gastos", __name__)
@@ -26,7 +26,7 @@ def crear_gasto():
     if role_err:
         return auth_response(role_err)
 
-    body = request.get_json(silent=True) or {}
+    body = json_body()
     row, err = gasto_service.crear_gasto(
         body.get("proveedor"), body.get("concepto"),
         body.get("monto"), body.get("tipo"), body.get("fecha_registro"),
@@ -60,7 +60,7 @@ def pagar_gasto(gasto_id):
     if role_err:
         return auth_response(role_err)
 
-    body = request.get_json(silent=True) or {}
+    body = json_body()
     row, err = gasto_service.pagar_gasto(gasto_id, body.get("monto"))
     if err == "not_found":
         return jsonify({"error": "Gasto no encontrado"}), 404

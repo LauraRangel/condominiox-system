@@ -1,4 +1,4 @@
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 MONEY_STEP = Decimal("0.01")
 
@@ -8,7 +8,10 @@ def to_decimal(value):
         return value
     if value in (None, ""):
         return Decimal("0")
-    return Decimal(str(value))
+    resultado = Decimal(str(value))
+    if not resultado.is_finite():
+        raise InvalidOperation("Monto no finito")
+    return resultado
 
 
 def round_money(value):

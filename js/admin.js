@@ -187,14 +187,14 @@ function listarPropietarios(items = propietarios) {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${prop.id}</td>
-            <td>${prop.nombre} ${prop.apellido}</td>
-            <td>${prop.dni}</td>
-            <td>${prop.nro_departamento}</td>
-            <td>${prop.torre}</td>
-            <td>${prop.telefono || '-'}</td>
+            <td>${escapeHtml(prop.nombre)} ${escapeHtml(prop.apellido)}</td>
+            <td>${escapeHtml(prop.dni)}</td>
+            <td>${escapeHtml(prop.nro_departamento)}</td>
+            <td>${escapeHtml(prop.torre)}</td>
+            <td>${escapeHtml(prop.telefono || '-')}</td>
             <td>
                 <div class="propietario-actions">
-                    <button class="btn btn-info btn-sm" onclick="verEstadoCuenta(${prop.id}, '${prop.nombre} ${prop.apellido}')">Cuenta</button>
+                    <button class="btn btn-info btn-sm" onclick="verEstadoCuenta(${prop.id})">Cuenta</button>
                     <button class="btn btn-secondary btn-sm" onclick="editarPropietario(${prop.id})">Editar</button>
                     <button class="btn btn-danger btn-sm" onclick="eliminarPropietario(${prop.id})">Eliminar</button>
                 </div>
@@ -548,9 +548,9 @@ function listarGastos() {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${gasto.id}</td>
-            <td>${gasto.proveedor}</td>
-            <td>${gasto.concepto}</td>
-            <td><span style="background: var(--accent-gold); color: white; padding: 0.2rem 0.5rem; border-radius: 3px;">${gasto.tipo}</span></td>
+            <td>${escapeHtml(gasto.proveedor)}</td>
+            <td>${escapeHtml(gasto.concepto)}</td>
+            <td><span style="background: var(--accent-gold); color: white; padding: 0.2rem 0.5rem; border-radius: 3px;">${escapeHtml(gasto.tipo)}</span></td>
             <td>${formatCurrency(gasto.monto)}</td>
             <td>${formatCurrency(gasto.monto_pagado || 0)}</td>
             <td>${formatCurrency(gasto.saldo || 0)}</td>
@@ -736,10 +736,11 @@ function listarRecibos(tipo = 'pendientes', items = []) {
         const total = toNumber(recibo.monto_administracion)
             + toNumber(recibo.monto_agua)
             + toNumber(recibo.monto_luz)
-            + toNumber(recibo.monto_mantenimiento);
+            + toNumber(recibo.monto_mantenimiento)
+            + toNumber(recibo.monto_reservas);
         const estado = recibo.pagado
-            ? '<span style="color: green;">✅ Pagado</span>'
-            : '<span style="color: orange;">⏳ Pendiente</span>';
+            ? '<span class="estado-chip pagado">Pagado</span>'
+            : '<span class="estado-chip pendiente">Pendiente</span>';
 
         const tr = document.createElement('tr');
         const pagado = toNumber(recibo.monto_pagado);
@@ -747,8 +748,8 @@ function listarRecibos(tipo = 'pendientes', items = []) {
 
         tr.innerHTML = `
             <td>${recibo.id}</td>
-            <td>${recibo.propietario.nombre} ${recibo.propietario.apellido}</td>
-            <td>${recibo.nro_departamento} - ${recibo.torre}</td>
+            <td>${escapeHtml(recibo.propietario.nombre)} ${escapeHtml(recibo.propietario.apellido)}</td>
+            <td>${escapeHtml(recibo.nro_departamento)} - ${escapeHtml(recibo.torre)}</td>
             <td>${formatCurrency(total)}</td>
             <td>${formatCurrency(pagado)}</td>
             <td>${formatCurrency(saldo)}</td>
@@ -757,7 +758,7 @@ function listarRecibos(tipo = 'pendientes', items = []) {
             <td>${formatDate(recibo.fecha_pago)}</td>
             <td>
                 <div class="acciones-group">
-                    <button class="btn btn-secondary btn-sm" onclick="verComprobante(${recibo.id})" title="Ver comprobante">🧾</button>
+                    <button class="btn btn-secondary btn-sm" onclick="verComprobante(${recibo.id})" title="Ver comprobante">${window.iconoSvg ? iconoSvg('recibo') : '🧾'}</button>
                     <button class="btn btn-danger btn-sm" onclick="eliminarRecibo(${recibo.id})">Eliminar</button>
                 </div>
             </td>
@@ -917,8 +918,8 @@ function renderTablaEstructura(items) {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${item.id}</td>
-            <td>${item.propietario.nombre} ${item.propietario.apellido}</td>
-            <td>${item.nro_departamento} - ${item.torre}</td>
+            <td>${escapeHtml(item.propietario.nombre)} ${escapeHtml(item.propietario.apellido)}</td>
+            <td>${escapeHtml(item.nro_departamento)} - ${escapeHtml(item.torre)}</td>
             <td>${formatCurrency(item.saldo)}</td>
             <td>${formatDate(item.fecha_emision)}</td>
             <td>${estadoHtml}</td>
@@ -951,8 +952,8 @@ async function cargarTopMorosos() {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${item.recibo_id}</td>
-            <td>${item.propietario.nombre} ${item.propietario.apellido}</td>
-            <td>${item.nro_departamento} - ${item.torre}</td>
+            <td>${escapeHtml(item.propietario.nombre)} ${escapeHtml(item.propietario.apellido)}</td>
+            <td>${escapeHtml(item.nro_departamento)} - ${escapeHtml(item.torre)}</td>
             <td>${formatCurrency(item.saldo)}</td>
             <td>${item.dias_pendiente}</td>
         `;
@@ -1047,7 +1048,7 @@ async function cargarAnuncios() {
     tbody.innerHTML = items.map(a => `
         <tr>
             <td>${a.id}</td>
-            <td>${a.titulo}</td>
+            <td>${escapeHtml(a.titulo)}</td>
             <td><span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:12px;font-size:0.82rem;">${tipoLabel[a.tipo] || a.tipo}</span></td>
             <td>${a.fecha_publicacion || ''}</td>
             <td>${a.fecha_caducidad ? `<span style="color:#dc2626;">${a.fecha_caducidad}</span>` : '<span style="color:#9ca3af;">Sin caducidad</span>'}</td>
@@ -1105,6 +1106,10 @@ async function eliminarAnuncio(id) {
 let _estadoCuentaPropietarioId = null;
 
 async function verEstadoCuenta(propietarioId, nombre) {
+    if (!nombre) {
+        const p = (typeof propietarios !== 'undefined' ? propietarios : []).find(x => x.id === propietarioId);
+        nombre = p ? `${p.nombre} ${p.apellido}` : `Propietario #${propietarioId}`;
+    }
     _estadoCuentaPropietarioId = propietarioId;
     document.getElementById('modalEstadoCuentaTitulo').textContent = `Estado de Cuenta — ${nombre}`;
     document.getElementById('estadoCuentaDesde').value = '';
@@ -1149,13 +1154,13 @@ async function _cargarTablaEstadoCuenta(propietarioId, desde, hasta) {
     tbody.innerHTML = items.map(r => `
         <tr>
             <td>${(r.fecha_emision || '').slice(0, 7)}</td>
-            <td>S/ ${(+r.monto_administracion).toFixed(2)}</td>
-            <td>S/ ${(+r.monto_agua).toFixed(2)}</td>
-            <td>S/ ${(+r.monto_luz).toFixed(2)}</td>
-            <td>S/ ${(+r.monto_mantenimiento).toFixed(2)}</td>
-            <td>S/ ${(+r.total).toFixed(2)}</td>
-            <td>S/ ${(+r.monto_pagado).toFixed(2)}</td>
-            <td>S/ ${(+r.saldo).toFixed(2)}</td>
+            <td>S/\u00a0${(+r.monto_administracion).toFixed(2)}</td>
+            <td>S/\u00a0${(+r.monto_agua).toFixed(2)}</td>
+            <td>S/\u00a0${(+r.monto_luz).toFixed(2)}</td>
+            <td>S/\u00a0${(+r.monto_mantenimiento).toFixed(2)}</td>
+            <td>S/\u00a0${(+r.total).toFixed(2)}</td>
+            <td>S/\u00a0${(+r.monto_pagado).toFixed(2)}</td>
+            <td>S/\u00a0${(+r.saldo).toFixed(2)}</td>
             <td><span style="color:${r.pagado ? '#16a34a' : '#dc2626'}">${r.pagado ? 'Pagado' : 'Pendiente'}</span></td>
         </tr>
     `).join('');
@@ -1171,9 +1176,9 @@ async function cargarResumenFinanciero() {
     const { response, data } = await apiFetch(url);
     if (!response.ok) return;
 
-    document.getElementById('financieroEmitido').textContent = `S/ ${(+data.total_emitido).toFixed(2)}`;
-    document.getElementById('financieroCobrado').textContent = `S/ ${(+data.total_cobrado).toFixed(2)}`;
-    document.getElementById('financieroPendiente').textContent = `S/ ${(+data.saldo_pendiente).toFixed(2)}`;
+    document.getElementById('financieroEmitido').textContent = `S/\u00a0${(+data.total_emitido).toFixed(2)}`;
+    document.getElementById('financieroCobrado').textContent = `S/\u00a0${(+data.total_cobrado).toFixed(2)}`;
+    document.getElementById('financieroPendiente').textContent = `S/\u00a0${(+data.saldo_pendiente).toFixed(2)}`;
     document.getElementById('financieroCobranza').textContent = `${data.porcentaje_cobranza}%`;
 
     const desglose = data.desglose || {};
@@ -1185,7 +1190,7 @@ async function cargarResumenFinanciero() {
         ['Mantenimiento', desglose.mantenimiento],
     ];
     tbody.innerHTML = filas.map(([nombre, monto]) => `
-        <tr><td>${nombre}</td><td>S/ ${(+(monto || 0)).toFixed(2)}</td></tr>
+        <tr><td>${nombre}</td><td>S/\u00a0${(+(monto || 0)).toFixed(2)}</td></tr>
     `).join('');
 }
 

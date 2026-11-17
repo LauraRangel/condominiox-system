@@ -1,7 +1,7 @@
 import io
 import datetime as dt
 
-from dao import recibo_dao, gasto_dao
+from dao import recibo_dao
 from services.recibo_service import get_morosos_prioridad
 from utils.money import money_float, to_decimal
 from utils.logger import get_logger
@@ -18,6 +18,7 @@ def get_resumen_financiero(mes: str) -> dict:
     concepto_agua = 0.0
     concepto_luz = 0.0
     concepto_mant = 0.0
+    concepto_reservas = 0.0
 
     for row in rows:
         total = money_float(
@@ -25,6 +26,7 @@ def get_resumen_financiero(mes: str) -> dict:
             + to_decimal(row["monto_agua"])
             + to_decimal(row["monto_luz"])
             + to_decimal(row["monto_mantenimiento"])
+            + to_decimal(row.get("monto_reservas") or 0)
         )
         pagado = money_float(row.get("monto_pagado") or 0)
         total_emitido += total
@@ -33,6 +35,7 @@ def get_resumen_financiero(mes: str) -> dict:
         concepto_agua += money_float(row["monto_agua"])
         concepto_luz += money_float(row["monto_luz"])
         concepto_mant += money_float(row["monto_mantenimiento"])
+        concepto_reservas += money_float(row.get("monto_reservas") or 0)
 
     saldo_pendiente = round(total_emitido - total_cobrado, 2)
     porcentaje_cobranza = round((total_cobrado / total_emitido * 100), 2) if total_emitido > 0 else 0.0
@@ -48,6 +51,7 @@ def get_resumen_financiero(mes: str) -> dict:
             "agua": round(concepto_agua, 2),
             "luz": round(concepto_luz, 2),
             "mantenimiento": round(concepto_mant, 2),
+            "reservas": round(concepto_reservas, 2),
         },
     }
 

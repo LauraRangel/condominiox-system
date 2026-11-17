@@ -142,6 +142,7 @@ class MatrizRecibos:
                 + recibo["monto_agua"]
                 + recibo["monto_luz"]
                 + recibo["monto_mantenimiento"]
+                + recibo.get("monto_reservas", 0)
             )
         return total
 
@@ -155,6 +156,7 @@ class MatrizRecibos:
                     + recibo["monto_agua"]
                     + recibo["monto_luz"]
                     + recibo["monto_mantenimiento"]
+                    + recibo.get("monto_reservas", 0)
                 )
         return total
 

@@ -354,3 +354,17 @@ Todas implementadas desde cero en Python, sin librerías externas.
 - La búsqueda de propietarios por DNI de 8 dígitos usa `arbol.buscar(int(q))` (O(log n)); cualquier otro texto usa `arbol.inorden()` + filtro lineal.
 - El Excel de morosidad se genera en memoria (`BytesIO`), nunca se escribe en disco.
 - `auth_service.generar_token()` usa `datetime.now(timezone.utc)`, nunca `datetime.utcnow()`: `.timestamp()` sobre un datetime naive lo reinterpreta con la zona horaria *local* del sistema, no UTC — esto corría el `iat`/`exp` del JWT por el offset horario del servidor (bug real detectado por los tests de integración, pasaba desapercibido en Render porque corre en UTC).
+
+---
+
+## Componentes innovadores APF3 (noviembre 2026)
+
+Ver sección 13 de `README_INTEGRADOR.md`. Resumen:
+- **Pasarela emulada:** `services/pasarelas.py` (adaptadores) + `services/pago_service.py` + `routes/pago_routes.py` + `js/pasarela.js`. El propietario ya NO usa `POST /api/recibos/<id>/pagar` (ahora solo Admin).
+- **Reservas:** `services/reserva_service.py` (`validar_reglas` y `validar_area` son puras) + `dao/reserva_dao.py` + `js/reservas.js`. `recibos.monto_reservas` entra en todos los totales (DAO, servicios, structures, JS). Áreas: salón, parrillas, gimnasio, cowork, pet shower; `uso_exclusivo=FALSE` permite reservas cruzadas hasta el aforo.
+- **Garantías:** `areas_comunes.garantia`; la reserva nace `pendiente_garantia` (30 min), se confirma al pagar la garantía por `POST /api/pagos` con `concepto: "garantia"` y el admin la resuelve (devolución total/parcial/retención) en `pago_service.resolver_garantia()`. Cancelar devuelve la garantía completa. Los pagos son atómicos (un commit, `FOR UPDATE`).
+- **Asistente IA:** `services/rag.py` (TF-IDF propio) + `services/asistente_service.py` + `services/llm_client.py` (Groq/Gemini por env) + `js/asistente.js`. Sin API key responde en modo respaldo.
+- **Migraciones:** `migrations.py`, llamado desde `app.py`. Tablas: `areas_comunes`, `reservas`, `transacciones_pago`, `consultas_asistente`.
+- **Admin:** sección "Pagos y Reservas" en `admin.html` + `js/admin-enlinea.js`: transacciones, configuración editable de áreas (`PUT /api/areas-comunes/<id>`) y reservas.
+- **Demo:** `seed_demo.py`. En `localhost`, `js/config.js` apunta a `http://localhost:5000/api`.
+

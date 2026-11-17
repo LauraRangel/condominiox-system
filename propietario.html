@@ -2,10 +2,17 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; frame-src blob: https://www.youtube-nocookie.com; connect-src 'self' http://localhost:5000 http://127.0.0.1:5000 https://condominiox-system.onrender.com; object-src 'none'; base-uri 'self'; form-action 'self'">
+    <meta name="referrer" content="no-referrer">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Panel de Propietario - CondominioX">
     <title>Panel Propietario - CondominioX</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
     <link rel="stylesheet" href="css/styles.css?v=20260716">
+    <link rel="stylesheet" href="css/innovacion.css?v=20261116">
+    <link rel="stylesheet" href="css/moderno.css?v=20261116">
 </head>
 <body>
     <div class="app-container">
@@ -31,9 +38,21 @@
                     <span class="nav-icon">✅</span>
                     <span>Recibos Pagados</span>
                 </button>
+                <button class="nav-item" data-section="reservas" onclick="mostrarSeccion('reservas', this)">
+                    <span class="nav-icon">📅</span>
+                    <span>Reservas</span>
+                </button>
+                <button class="nav-item" data-section="asistente" onclick="mostrarSeccion('asistente', this)">
+                    <span class="nav-icon">🤖</span>
+                    <span>Asistente IA</span>
+                </button>
                 <button class="nav-item" data-section="comunicados" onclick="mostrarSeccion('comunicados', this)">
                     <span class="nav-icon">📢</span>
                     <span>Comunicados <span id="badgeComunicados" class="hidden" style="background:#dc2626;color:white;border-radius:10px;padding:1px 6px;font-size:0.75rem;margin-left:4px;">0</span></span>
+                </button>
+                <button class="nav-item" data-section="documentos" onclick="mostrarSeccion('documentos', this)">
+                    <span class="nav-icon">📁</span>
+                    <span>Documentos</span>
                 </button>
                 <button class="nav-item" data-section="perfil" onclick="mostrarSeccion('perfil', this)">
                     <span class="nav-icon">⚙️</span>
@@ -125,6 +144,11 @@
                 </div>
 
                 <div id="mensajeRecibos" class="mensaje"></div>
+                <div class="pago-online-banner">
+                    <span>💳</span>
+                    <div><strong>Paga en línea con Yape, tarjeta o Mercado Pago.</strong>
+                    Tu recibo se concilia al instante y recibes tu código de operación.</div>
+                </div>
 
                 <div class="data-table-container">
                     <table class="data-table">
@@ -136,6 +160,7 @@
                                 <th>Agua</th>
                                 <th>Luz</th>
                                 <th>Mant.</th>
+                                <th>Reservas</th>
                                 <th>Total</th>
                                 <th>Pagado</th>
                                 <th>Saldo</th>
@@ -144,7 +169,7 @@
                         </thead>
                         <tbody id="tablaRecibosPendientes">
                             <tr>
-                                <td colspan="10" class="empty-state">No hay recibos pendientes</td>
+                                <td colspan="11" class="empty-state">No hay recibos pendientes</td>
                             </tr>
                         </tbody>
                     </table>
@@ -182,15 +207,74 @@
                                 <th>Agua</th>
                                 <th>Luz</th>
                                 <th>Mant.</th>
+                                <th>Reservas</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="tablaRecibosPagados">
                             <tr>
-                                <td colspan="11" class="empty-state">No hay recibos pagados</td>
+                                <td colspan="12" class="empty-state">No hay recibos pagados</td>
                             </tr>
                         </tbody>
                     </table>
+                </div>
+            </section>
+
+
+            <!-- Reservas de áreas comunes (componente innovador 1) -->
+            <section id="reservas-section" class="panel-section">
+                <div class="section-header">
+                    <h2>Reserva de Áreas Comunes</h2>
+                    <p>Elige el área, la fecha y el horario. El sistema valida las reglas, la tarifa pasa a tu recibo del mes y la garantía (si el área la pide) se paga en línea y se devuelve después del uso.</p>
+                </div>
+
+                <div id="areasGrid" class="areas-grid"><p class="empty-state">Cargando áreas...</p></div>
+
+                <div class="reserva-layout">
+                    <div class="form-card">
+                        <div class="form-card-header"><h3>Mis reservas</h3></div>
+                        <div class="data-table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr><th>Área</th><th>Fecha</th><th>Horario</th><th>Tarifa</th><th>Garantía</th><th>Estado</th><th></th></tr>
+                                </thead>
+                                <tbody id="tablaMisReservas">
+                                    <tr><td colspan="7" class="empty-state">Sin reservas</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Asistente con IA (componente innovador 3) -->
+            <section id="asistente-section" class="panel-section">
+                <div class="section-header">
+                    <h2>Asistente Virtual</h2>
+                    <p>Pregunta sobre el reglamento o sobre tu cuenta. Responde citando la fuente y solo ve tu información.</p>
+                </div>
+
+                <div class="chat-card">
+                    <div class="chat-header">
+                        <div class="chat-avatar">🤖</div>
+                        <div>
+                            <strong>Asistente CondominioX</strong>
+                            <small id="chatModo">Solo lectura · cita sus fuentes</small>
+                        </div>
+                    </div>
+                    <div id="chatMensajes" class="chat-mensajes"></div>
+                    <div class="chat-sugerencias" id="chatSugerencias">
+                        <button type="button" onclick="preguntaSugerida(this)">¿Cuánto debo y de qué meses?</button>
+                        <button type="button" onclick="preguntaSugerida(this)">¿Cuánto cuesta reservar la zona de parrillas?</button>
+                        <button type="button" onclick="preguntaSugerida(this)">¿Puedo llevar a mi perro al salón?</button>
+                        <button type="button" onclick="preguntaSugerida(this)">¿Cuánto se gastó en agua este mes?</button>
+                        <button type="button" onclick="preguntaSugerida(this)">¿Cuándo me devuelven la garantía?</button>
+                    </div>
+                    <form class="chat-input" onsubmit="enviarPregunta(event)">
+                        <input type="text" id="chatPregunta" maxlength="500" placeholder="Escribe tu pregunta..." autocomplete="off" required>
+                        <button type="submit" class="btn btn-primary" id="btnEnviarPregunta">Enviar</button>
+                    </form>
+                    <p class="chat-aviso">El asistente no realiza pagos ni reservas y no reemplaza a la administración.</p>
                 </div>
             </section>
 
@@ -227,6 +311,30 @@
             </section>
 
             <!-- Perfil -->
+            <!-- Documentos y reglamento -->
+            <section id="documentos-section" class="panel-section">
+                <div class="section-header">
+                    <h2>Documentos</h2>
+                    <p>Reglamento interno, actas y documentos publicados por la administración.</p>
+                </div>
+                <div class="doc-tabs">
+                    <button type="button" class="doc-tab activo" data-tab="reglamento" onclick="tabDocumentos('reglamento')">Reglamento interno</button>
+                    <button type="button" class="doc-tab" data-tab="archivos" onclick="tabDocumentos('archivos')">Archivos PDF</button>
+                </div>
+                <div id="docTabReglamento" class="form-card regl-card">
+                    <div class="regl-buscar">
+                        <input type="search" id="reglBuscar" placeholder="Buscar en el reglamento (ej.: mascotas, ruido, garantía)" oninput="filtrarReglamento()">
+                    </div>
+                    <div class="regl-layout">
+                        <nav id="reglIndice" class="regl-indice"></nav>
+                        <div id="reglArticulos" class="regl-articulos"></div>
+                    </div>
+                </div>
+                <div id="docTabArchivos" class="hidden">
+                    <div id="listaDocumentos" class="doc-grid"></div>
+                </div>
+            </section>
+
             <section id="perfil-section" class="panel-section">
                 <div class="section-header">
                     <h2>Mi Perfil</h2>
@@ -241,22 +349,22 @@
                         <div class="form-group">
                             <label for="actualContrasena">Contraseña Actual *</label>
                             <div class="password-toggle-field">
-                                <input type="password" id="actualContrasena" required minlength="6">
+                                <input type="password" id="actualContrasena" required minlength="8">
                                 <button type="button" class="password-toggle-btn" data-target="actualContrasena">Ver</button>
                             </div>
                         </div>
                         <div class="form-group">
                             <label for="nuevaContrasena">Nueva Contraseña *</label>
                             <div class="password-toggle-field">
-                                <input type="password" id="nuevaContrasena" required minlength="6">
+                                <input type="password" id="nuevaContrasena" required minlength="8">
                                 <button type="button" class="password-toggle-btn" data-target="nuevaContrasena">Ver</button>
                             </div>
-                            <small>Mínimo 6 caracteres</small>
+                            <small>Mínimo 8 caracteres, con letras y números</small>
                         </div>
                         <div class="form-group">
                             <label for="confirmarContrasena">Confirmar Contraseña *</label>
                             <div class="password-toggle-field">
-                                <input type="password" id="confirmarContrasena" required minlength="6">
+                                <input type="password" id="confirmarContrasena" required minlength="8">
                                 <button type="button" class="password-toggle-btn" data-target="confirmarContrasena">Ver</button>
                             </div>
                         </div>
@@ -270,29 +378,165 @@
         </main>
     </div>
 
-    <!-- Modal Pago Recibo -->
+    <!-- Modal: reservar un área (se abre desde cada tarjeta) -->
+    <div id="modalReserva" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="resTitulo" onclick="cerrarModalReserva()">
+        <div class="modal-card reserva-modal" onclick="event.stopPropagation()">
+            <div class="reserva-modal-head">
+                <img id="resImg" src="" alt="">
+                <div>
+                    <h3 id="resTitulo">Reservar</h3>
+                    <p id="resSub"></p>
+                </div>
+                <button type="button" class="btn-close" onclick="cerrarModalReserva()" aria-label="Cerrar">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="res-paso">
+                    <span class="res-paso-num">1</span> Elige el día
+                </div>
+                <div id="resDias" class="res-dias"></div>
+
+                <div class="res-paso">
+                    <span class="res-paso-num">2</span> Elige el horario
+                    <small id="resAyudaHorario">Toca la hora de inicio y luego la de fin para extender</small>
+                </div>
+                <div id="resSlots" class="res-slots"></div>
+                <div class="res-leyenda">
+                    <span><i class="lg libre"></i>Disponible</span>
+                    <span><i class="lg sel"></i>Tu selección</span>
+                    <span><i class="lg parcial"></i>Pocos cupos</span>
+                    <span><i class="lg ocupado"></i>Reservado</span>
+                    <span><i class="lg mia"></i>Tu reserva</span>
+                    <span><i class="lg bloqueado"></i>No disponible</span>
+                </div>
+
+                <div class="res-paso">
+                    <span class="res-paso-num">3</span> ¿Quiénes asisten?
+                </div>
+                <div class="res-personas">
+                    <button type="button" class="icon-btn" onclick="cambiarPersonas(-1)" aria-label="Menos">−</button>
+                    <span id="resPersonas">1</span>
+                    <button type="button" class="icon-btn" onclick="cambiarPersonas(1)" aria-label="Más">+</button>
+                    <small id="resPersonasAyuda"></small>
+                </div>
+                <div class="res-invitados">
+                    <div class="res-inv-head">
+                        <span>Lista de invitados <small id="resInvContador"></small></span>
+                        <div class="res-inv-acciones">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="agregarInvitado()">+ Agregar invitado</button>
+                            <label class="btn btn-secondary btn-sm" title="Columnas: nombres, apellidos, tipo (DNI o CE), número">
+                                Importar CSV
+                                <input type="file" accept=".csv,.txt" hidden onchange="importarInvitados(this)">
+                            </label>
+                        </div>
+                    </div>
+                    <div id="resInvitados"></div>
+                    <small class="res-inv-nota">Opcional. La lista solo la ve la administración para el control de acceso en portería. CSV: nombres, apellidos, tipo (DNI o CE), número.</small>
+                </div>
+
+                <div id="resResumen" class="res-resumen"></div>
+                <div id="reglasIncumplidas" class="reglas-error hidden"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="cerrarModalReserva()">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnReservar" onclick="crearReserva()" disabled>Elige un horario</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Pasarela de pagos emulada (componente innovador 2) -->
     <div id="modalPago" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modalPagoTitulo">
-        <div class="modal-card" onclick="event.stopPropagation()">
+        <div class="modal-card pasarela-card" onclick="event.stopPropagation()">
             <div class="modal-header">
                 <h3>
                     <span class="modal-icon success">💳</span>
-                    <span id="modalPagoTitulo">Pagar Recibo</span>
+                    <span id="modalPagoTitulo">Pagar recibo</span>
                 </h3>
                 <button type="button" class="btn-close" onclick="cerrarModalPago()" aria-label="Cerrar">×</button>
             </div>
             <div class="modal-body">
-                <p id="modalPagoSaldo" style="color:#6b7280; font-size:0.9rem; margin-bottom:1rem;"></p>
-                <div class="form-group">
-                    <label for="modalPagoMonto">Monto a pagar (S/)</label>
-                    <input type="number" id="modalPagoMonto" min="0.01" step="0.01"
-                           style="width:100%; padding:0.5rem 0.75rem; border:1px solid #d1d5db; border-radius:8px; font-size:1rem; box-sizing:border-box;">
+                <div class="sandbox-badge">MODO SANDBOX · no se cobra dinero real</div>
+
+                <!-- Paso 1: monto y medio -->
+                <div id="pasoMedio">
+                    <p id="modalPagoSaldo" class="pasarela-saldo"></p>
+                    <div class="form-group">
+                        <label for="modalPagoMonto">Monto a pagar (S/)</label>
+                        <div class="monto-row">
+                            <input type="number" id="modalPagoMonto" min="0.01" step="0.01">
+                            <button type="button" class="btn btn-secondary btn-sm" id="btnMontoTotal" onclick="usarMontoTotal()">Pagar total</button>
+                        </div>
+                    </div>
+                    <label class="pasarela-label">Medio de pago</label>
+                    <div class="medios-grid">
+                        <button type="button" class="medio-btn" data-medio="yape" onclick="elegirMedio('yape')">
+                            <span class="medio-logo yape">yape</span><small>Celular + código</small>
+                        </button>
+                        <button type="button" class="medio-btn" data-medio="culqi" onclick="elegirMedio('culqi')">
+                            <span class="medio-logo culqi">Tarjeta</span><small>Visa / Mastercard · Culqi</small>
+                        </button>
+                        <button type="button" class="medio-btn" data-medio="mercadopago" onclick="elegirMedio('mercadopago')">
+                            <span class="medio-logo mp">Mercado Pago</span><small>Cuenta MP</small>
+                        </button>
+                    </div>
+
+                    <div id="formYape" class="medio-form hidden">
+                        <div class="form-row-2">
+                            <div class="form-group">
+                                <label for="yapeCelular">Celular Yape</label>
+                                <input type="tel" id="yapeCelular" maxlength="9" placeholder="9XXXXXXXX">
+                            </div>
+                            <div class="form-group">
+                                <label for="yapeOtp">Código de aprobación</label>
+                                <input type="text" id="yapeOtp" maxlength="6" placeholder="6 dígitos">
+                            </div>
+                        </div>
+                        <small class="ayuda-sandbox">El código de aprobación se ve en la app Yape (Menú → Código de aprobación). Prueba: cualquier código; <b>000000</b> = rechazado.</small>
+                    </div>
+
+                    <div id="formCulqi" class="medio-form hidden">
+                        <div class="form-group">
+                            <label for="tarjetaNumero">Número de tarjeta</label>
+                            <input type="text" id="tarjetaNumero" inputmode="numeric" maxlength="19" placeholder="4111 1111 1111 1111" autocomplete="off">
+                        </div>
+                        <div class="form-row-3">
+                            <div class="form-group">
+                                <label for="tarjetaExp">Vence (MM/AA)</label>
+                                <input type="text" id="tarjetaExp" maxlength="5" placeholder="12/28" autocomplete="off">
+                            </div>
+                            <div class="form-group">
+                                <label for="tarjetaCvv">CVV</label>
+                                <input type="password" id="tarjetaCvv" maxlength="4" placeholder="123" autocomplete="off">
+                            </div>
+                            <div class="form-group">
+                                <label for="tarjetaEmail">Correo</label>
+                                <input type="email" id="tarjetaEmail" placeholder="tu@correo.pe">
+                            </div>
+                        </div>
+                        <small class="ayuda-sandbox">🔒 La tarjeta se tokeniza en tu navegador; el servidor nunca recibe el número. Prueba: 4111 1111 1111 1111 aprobada · 4000 0000 0000 0002 rechazada.</small>
+                    </div>
+
+                    <div id="formMp" class="medio-form hidden">
+                        <div class="form-group">
+                            <label for="mpEmail">Correo de tu cuenta Mercado Pago</label>
+                            <input type="email" id="mpEmail" placeholder="tu@correo.pe">
+                        </div>
+                        <small class="ayuda-sandbox">Prueba: cualquier correo; si contiene <b>rechazo</b> el pago es rechazado.</small>
+                    </div>
+                    <div id="modalPagoError" class="modal-error" style="display:none;"></div>
                 </div>
-                <div id="modalPagoError" class="modal-error" style="display:none;"></div>
+
+                <!-- Paso 2: procesando -->
+                <div id="pasoProcesando" class="pasarela-procesando hidden">
+                    <div class="spinner"></div>
+                    <p id="textoProcesando">Conectando con la pasarela...</p>
+                </div>
+
+                <!-- Paso 3: resultado -->
+                <div id="pasoResultado" class="hidden"></div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer" id="pagoFooter">
                 <button type="button" class="btn btn-secondary" onclick="cerrarModalPago()">Cancelar</button>
-                <button type="button" class="btn btn-secondary" id="btnPagarTotal" onclick="usarMontoTotal()">Pagar total</button>
-                <button type="button" class="btn btn-primary" onclick="confirmarPago()">Confirmar pago</button>
+                <button type="button" class="btn btn-primary" id="btnConfirmarPago" onclick="confirmarPago()">Pagar</button>
             </div>
         </div>
     </div>
@@ -314,6 +558,20 @@
                 <button type="button" class="btn btn-secondary" id="confirmModalCancel">Cancelar</button>
                 <button type="button" class="btn btn-danger" id="confirmModalAccept">Confirmar</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Visor de PDF -->
+    <div id="modalVisorPdf" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="visorTitulo" onclick="cerrarVisorPdf()">
+        <div class="modal-card visor-card" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3><span class="modal-icon success">📄</span><span id="visorTitulo">Documento</span></h3>
+                <div class="visor-acciones">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="descargarPdfActual()">Descargar</button>
+                    <button type="button" class="btn-close" onclick="cerrarVisorPdf()" aria-label="Cerrar">×</button>
+                </div>
+            </div>
+            <iframe id="visorFrame" title="Visor de PDF"></iframe>
         </div>
     </div>
 
@@ -340,9 +598,15 @@
         </div>
     </div>
 
-    <script src="js/config.js?v=20260716"></script>
+    <script src="js/config.js?v=20261116"></script>
     <script src="js/auth.js?v=20260716"></script>
-    <script src="js/propietario.js?v=20260716"></script>
+    <script src="js/propietario.js?v=20261116"></script>
+    <script src="js/pasarela.js?v=20261116"></script>
+    <script src="js/areas-img.js?v=20261116"></script>
+    <script src="js/invitados.js?v=20261116"></script>
+    <script src="js/documentos.js?v=20261116"></script>
+    <script src="js/reservas.js?v=20261116"></script>
+    <script src="js/asistente.js?v=20261116"></script>
     <script>
         // Override mostrarSeccion para el nuevo diseño
         function mostrarSeccion(seccionId, btn) {
@@ -353,5 +617,6 @@
             if (btn) btn.classList.add('active');
         }
     </script>
+    <script src="js/ui-moderno.js?v=20261116"></script>
 </body>
 </html>

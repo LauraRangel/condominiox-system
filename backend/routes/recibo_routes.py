@@ -2,7 +2,7 @@ import datetime as dt
 
 from flask import Blueprint, jsonify, request
 
-from middleware import get_payload, require_roles, auth_response
+from middleware import get_payload, require_roles, auth_response, json_body
 from services import recibo_service
 
 bp = Blueprint("recibos", __name__)
@@ -17,7 +17,7 @@ def generar_recibos():
     if role_err:
         return auth_response(role_err)
 
-    body = request.get_json(silent=True) or {}
+    body = json_body()
     fecha_emision = body.get("fecha_emision") or dt.date.today().isoformat()
     mes = body.get("mes") or str(fecha_emision)[:7]
 
@@ -36,7 +36,7 @@ def recalcular_recibos():
     if role_err:
         return auth_response(role_err)
 
-    body = request.get_json(silent=True) or {}
+    body = json_body()
     mes = body.get("mes")
     if not mes:
         return jsonify({"error": "Mes requerido (YYYY-MM)"}), 400
@@ -77,15 +77,18 @@ def listar_recibos_propietario(propietario_id):
 
 @bp.post("/api/recibos/<int:recibo_id>/pagar")
 def pagar_recibo(recibo_id):
+    """Registro manual de un pago (efectivo o transferencia) por la administración.
+    El propietario paga en línea mediante POST /api/pagos (pasarela)."""
     payload, err = get_payload()
     if err:
         return auth_response(err)
+    role_err = require_roles(payload, "Administrador")
+    if role_err:
+        return auth_response(role_err)
 
     propietario_payload_id = None
-    if payload.get("tipo") == "Propietario":
-        propietario_payload_id = payload.get("propietario_id")
 
-    body = request.get_json(silent=True) or {}
+    body = json_body()
     monto = body.get("monto")
     if monto is None:
         return jsonify({"error": "Monto requerido"}), 400

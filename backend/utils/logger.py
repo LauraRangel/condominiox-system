@@ -2,10 +2,14 @@ import logging
 import sys
 
 try:
-    from pythonjsonlogger import jsonlogger
+    from pythonjsonlogger import json as jsonlogger  # python-json-logger >= 3
     _json_available = True
 except ImportError:
-    _json_available = False
+    try:
+        from pythonjsonlogger import jsonlogger
+        _json_available = True
+    except ImportError:
+        _json_available = False
 
 
 def get_logger(name: str) -> logging.Logger:
